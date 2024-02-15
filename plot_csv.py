@@ -11,7 +11,6 @@ import matplotlib.pyplot as plt
 import os.path
 from pathlib import Path
 
-
 from edf_to_csv import edf_to_csv
 
 filename = 'chb01_02.edf'
@@ -53,13 +52,13 @@ csv_data.columns = csv_data.columns.str.replace('.', '')
 # read time col, count num of rows til reach 1
 
 time_freq = 0
-for index, row in csv_data.iterrows(): # use to double check
+for index, row in csv_data.iterrows():  # use to double check
     if row['time'] != 1:
         time_freq += 1
     elif row['time'] == 1:
-        #print(row['time'])
+        # print(row['time'])
         break
-#print(time_freq)
+# print(time_freq)
 
 # user input from 1 to n where i = channel num (list all channels + corresponding num, ask for input, s)
 col_list = list(csv_data.columns.values.tolist())
@@ -69,14 +68,35 @@ for i in col_list:
     if x != 0:
         print(f"{x} - {i}")
     x += 1
+
 col_num = 0
-print(len(col_list))
-while col_num < 1 or col_num >= len(col_list):
-    col_num = int(input(f"Select channel to plot (between 1 and {len(col_list) - 1}) -> "))
-    if col_num < 1 or col_num > len(col_list):
-        print("Invalid input")
-col_name = csv_data.columns[col_num]
-col_name2 = csv_data.columns[col_num + 1] # for testing multiple plots
+col_names = []
+
+x = True
+
+while x:
+    add = ''
+    col_num = 0
+    while col_num < 1 or col_num >= len(col_list):
+        col_num = int(input(f"Select channel to plot (between 1 and {len(col_list) - 1}) -> "))
+        if col_num < 1 or col_num > len(col_list):
+            print("Invalid input")
+        elif csv_data.columns[col_num] in col_names:
+            print("Channel already selected. Choose another")
+            col_num = 0
+
+        if col_num != 0:
+            col_names.append(csv_data.columns[col_num])
+
+    print(f"Currently plotting {col_names}")
+    while add == '':
+        add = str(input("Do you want to add another channel? (y/n) -> ")).lower().strip()
+        print(add)
+        if add != "y" and add != "n":
+            print("Please say yes (y) or no (n)")
+        elif add == 'n':
+            x = False
+
 
 file_length = len(csv_data) / time_freq
 print(f"EEG file is {file_length} seconds long")
@@ -146,19 +166,20 @@ while mode == 0 or mode > 2:
 # loop through array/list whatever for each plot
 # will try thursday
 
-fig, axs = plt.subplots(2)
+fig, axs = plt.subplots(len(col_names))
 
 plt.rcParams['lines.linewidth'] = 0.3
 
-fig.suptitle(f"EEG Graph for {col_name} and {col_name2}")
+fig.suptitle(f"EEG Graph for {col_names}")
 
-axs[0].plot(csv_data.time, csv_data[col_name], 'tab:blue')
-axs[1].plot(csv_data.time, csv_data[col_name2], 'tab:green')
+for i in range(len(col_names)):
+    axs[i].plot(csv_data.time, csv_data[col_names[i]], 'tab:blue')
+
 
 for ax in axs.flat:
     ax.set(ylabel="Amplitude/Voltage (uV)")
     ax.set_xlim(min_time, max_time)
 
-#axs[-1].set_xlim(xlabel="Time (S)")
+axs[-1].set(xlabel="Time (S)")
 
 plt.show()
