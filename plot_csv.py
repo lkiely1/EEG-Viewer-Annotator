@@ -13,7 +13,7 @@ from pathlib import Path
 
 from edf_to_csv import edf_to_csv
 
-filename = 'chb01_02.edf'
+filename = 'S001R01.edf'
 # note, for some reason run window always shows
 # "Extracting EDF parameters from C:\Users\R00212290\Desktop\Research Project\EEG-Viewer-Annotator\S001R01.edf..."
 # ask why
@@ -25,9 +25,11 @@ if filename.endswith('.edf'):
 
 csv_path = './' + filename + '.csv'
 edf_path = './' + filename + '.edf'
+txt_path = './' + filename + '_info.txt'
 
 check_csv_file = os.path.isfile(csv_path)
 check_edf_file = os.path.isfile(edf_path)
+check_txt_file = os.path.isfile(txt_path)
 
 if check_csv_file:
     print("CSV file already exists, opening")
@@ -50,6 +52,12 @@ csv_data.columns = csv_data.columns.str.replace('.', '')
 # get time
 # calculate time freq (e.g 256 lines in file2 and 3 is 1 sec)
 # read time col, count num of rows til reach 1
+time_freq_test = 0
+
+if check_txt_file:
+    with open(filename + '_info.txt', 'r') as f:
+        time_freq_test = float(f.readline())
+    f.close()
 
 time_freq = 0
 for index, row in csv_data.iterrows():  # use to double check
@@ -59,6 +67,11 @@ for index, row in csv_data.iterrows():  # use to double check
         # print(row['time'])
         break
 # print(time_freq)
+
+if float(time_freq_test) == time_freq:
+    print('same freq')
+else:
+    print('error')
 
 # user input from 1 to n where i = channel num (list all channels + corresponding num, ask for input, s)
 col_list = list(csv_data.columns.values.tolist())
@@ -91,7 +104,6 @@ while x:
     print(f"Currently plotting {col_names}")
     while add == '':
         add = str(input("Do you want to add another channel? (y/n) -> ")).lower().strip()
-        print(add)
         if add != "y" and add != "n":
             print("Please say yes (y) or no (n)")
         elif add == 'n':
@@ -166,7 +178,7 @@ while mode == 0 or mode > 2:
 # loop through array/list whatever for each plot
 # will try thursday
 
-fig, axs = plt.subplots(len(col_names))
+fig, axs = plt.subplots(len(col_names), sharey=True)
 
 plt.rcParams['lines.linewidth'] = 0.3
 
@@ -174,12 +186,12 @@ fig.suptitle(f"EEG Graph for {col_names}")
 
 for i in range(len(col_names)):
     axs[i].plot(csv_data.time, csv_data[col_names[i]], 'tab:blue')
-
+    axs[i].set(ylabel=f"{col_names[i]}")
 
 for ax in axs.flat:
-    ax.set(ylabel="Amplitude/Voltage (uV)")
-    ax.set_xlim(min_time, max_time)
+    ax.set_xlim(min_time, max_time) # need to get min max ylims
 
 axs[-1].set(xlabel="Time (S)")
+#axs.set(ylabel="Amplitude/Voltage (uV)")
 
 plt.show()

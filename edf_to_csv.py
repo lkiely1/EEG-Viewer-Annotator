@@ -9,5 +9,10 @@ def edf_to_csv(filename): # way to make sure file is edf to prevent crash?
     df = raw.to_data_frame()
     df.to_csv(filename + '.csv', index=False)
 
+    sfreq = raw.info['sfreq']
+
+    with open(filename + '_info.txt', 'w') as f:
+        f.write(str(sfreq))
+    f.close()
 
 edf_to_csv('S001R01.edf')
