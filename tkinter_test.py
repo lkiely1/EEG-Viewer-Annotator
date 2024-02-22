@@ -8,13 +8,13 @@ from plot_csv_tk import *
 
 
 def retrieve():
-    edf_to_csv(my_entry.get())
+    edf_to_csv(edf_file_path.get())
     # change csv file field to name of converted csv?
 
 
 def load_csv():
     print("TEST")
-    csv_data = pd.read_csv(my_entry2.get() + '.csv')
+    csv_data = pd.read_csv(csv_file_path.get() + '.csv')
 
     # need to clean header/column names (. in names causes problems, imagine will need more for other data)
     # e.g, clean_list = list of symbols to remove
@@ -28,18 +28,17 @@ def load_csv():
     # make plot options appear
     # make channel/plot options appear
 
-    # list of channel names to select
-    ### CHANGE TO UPDATE BOX NOT CREATE (NOT SURE HOW TO DO YET)
-    label = Label(root, text="Channels")
-    label.pack()
-
-    listbox = Listbox(root)
-
+    listbox.delete(0, END)
     for i in range(len(col_list)):
         if i != 0:
             listbox.insert(i, col_list[i])
 
-    listbox.pack()
+
+def plot():
+    start = start_time.get()
+    end = end_time.get()
+    print(f"TEST - start {start}, end {end}")
+
 
 
 
@@ -50,24 +49,45 @@ frame = Frame(root)
 frame.pack()
 
 # loading files, get way to verify filetype
-my_entry = Entry(frame, width=20)
-my_entry.insert(0, 'filename') ### change to file select
-my_entry.pack(padx=5, pady=5)
+edf_file_path = Entry(frame, width=20)
+edf_file_path.insert(0, 'filename') ### change to file select
+edf_file_path.pack(padx=5, pady=5)
 
-button = Button(frame, text="Convert", command=retrieve)
-button.pack(padx=5, pady=5)
+convert_button = Button(frame, text="Convert", command=retrieve)
+convert_button.pack(padx=5, pady=5)
 
-my_entry2 = Entry(frame, width=20)
-my_entry2.insert(0, my_entry.get()) ### change to file select, if converted before get filename from that
-my_entry2.pack(padx=5, pady=5)
+csv_file_path = Entry(frame, width=20)
+csv_file_path.insert(0, edf_file_path.get()) ### change to file select, if converted before get filename from that
+csv_file_path.pack(padx=5, pady=5)
 
-button2 = Button(frame, text="Load", command=load_csv)
-button2.pack(padx=5, pady=5)
+load_csv_button = Button(frame, text="Load", command=load_csv)
+load_csv_button.pack(padx=5, pady=5)
 
 
 #time options (start end lenght) (changing 1 affects others)
 
+label = Label(root, text="Channels")
+label.pack()
+
+listbox = Listbox(root)
+listbox.pack() ## not at top for some reason??
+
+start_time = Entry(frame, width=20)
+start_time.insert(0, 'start')
+start_time.pack(padx=5, pady=5)
+
+end_time = Entry(frame, width=20)
+end_time.insert(0, 'end')
+end_time.pack(padx=5, pady=5)
+
+time_amount = Entry(frame, width=20)
+time_amount.insert(0, 'amount')
+time_amount.pack(padx=5, pady=5)
+
 #plot button
+
+plot_button = Button(frame, text="Plot (not working)", command=plot)
+plot_button.pack(padx=5, pady=5)
 
 #make plot appear
 

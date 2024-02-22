@@ -194,5 +194,5 @@ def plot(csv_data, col_names, min_time, max_time):
     return fig, axs
 
 #TEST
-#fig, axs = plot(pd.read_csv('chb01_02.csv'), ['FP1-F7', 'F7-T7'],1,120)
-#plt.show()
+fig, axs = plot(pd.read_csv('chb01_02.csv'), ['FP1-F7', 'F7-T7'],1,120)
+plt.show()
