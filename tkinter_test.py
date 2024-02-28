@@ -14,6 +14,14 @@ def retrieve():
     # change csv file field to name of converted csv?
 
 
+def get_channels():
+    channels_indices = listbox.curselection()
+    channels = []
+    for index in channels_indices:
+        channels.append(listbox.get(index))
+    return channels
+
+
 def load_csv():
     print("TEST")
     csv_data = pd.read_csv(csv_file_path.get())
@@ -36,10 +44,13 @@ def load_csv():
             listbox.insert(i, col_list[i])
 
 
-def plot():
-    start = start_time.get()
-    end = end_time.get()
+def plot_data():
+    start = int(start_time.get())
+    end = int(end_time.get())
     print(f"TEST - start {start}, end {end}")
+
+    fig, axs = plot(pd.read_csv('chb01_02.csv'), get_channels(), start, end)
+    plt.show()
 
 
 def edf_browse():
@@ -82,57 +93,60 @@ def csv_browse():
 root = Tk()
 root.geometry("500x500")
 
-frame = Frame(root)
-frame.pack()
+file_frame = Frame(root)
+file_frame.pack()
+
+time_frame = Frame(root)
+time_frame.pack()
 
 # loading files, get way to verify filetype
-edf_file_path = Entry(frame, width=20)
+edf_file_path = Entry(file_frame, width=20)
 edf_file_path.insert(0, 'EDF File')
 edf_file_path.pack(padx=5, pady=5)
 
-edf_file_browse = Button(frame, text="Browse", command=edf_browse)
+edf_file_browse = Button(file_frame, text="Browse", command=edf_browse)
 edf_file_browse.pack(padx=5, pady=5)
 
-convert_button = Button(frame, text="Convert", command=retrieve)
+convert_button = Button(file_frame, text="Convert", command=retrieve)
 convert_button.pack(padx=5, pady=5)
 
-csv_file_path = Entry(frame, width=20)
+csv_file_path = Entry(file_frame, width=20)
 csv_file_path.insert(0, edf_file_path.get())
 csv_file_path.pack(padx=5, pady=5)
 
-csv_file_browse = Button(frame, text="Browse", command=csv_browse)
+csv_file_browse = Button(file_frame, text="Browse", command=csv_browse)
 csv_file_browse.pack(padx=5, pady=5)
 
-load_csv_button = Button(frame, text="Load", command=load_csv)
+load_csv_button = Button(file_frame, text="Load", command=load_csv)
 load_csv_button.pack(padx=5, pady=5)
 
 
 #time options (start end lenght) (changing 1 affects others)
 
-label = Label(root, text="Channels")
+label = Label(time_frame, text="Channels")
 label.pack()
 
-listbox = Listbox(root)
+listbox = Listbox(time_frame, selectmode="multiple")
 listbox.pack() ## not at top for some reason??
 
-start_time = Entry(frame, width=20)
+start_time = Entry(time_frame, width=20)
 start_time.insert(0, 'start')
 start_time.pack(padx=5, pady=5)
 
 
-end_time = Entry(frame, width=20)
+end_time = Entry(time_frame, width=20)
 end_time.insert(0, 'end')
 end_time.pack(padx=5, pady=5)
 
 
-time_amount = Entry(frame, width=20)
+time_amount = Entry(time_frame, width=20)
 time_amount.insert(0, 'amount')
 time_amount.pack(padx=5, pady=5)
 
 
 #plot button
 
-plot_button = Button(frame, text="Plot (not working)", command=plot)
+plot_button = Button(time_frame, text="Plot (not working)", command=plot_data)
 plot_button.pack(padx=5, pady=5)
 
 #make plot appear
