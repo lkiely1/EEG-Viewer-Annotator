@@ -2,7 +2,8 @@ import mne
 
 def edf_to_csv(filename):
     if filename.endswith('.edf'):
-        data_raw_file = (filename)
+        filename = filename.replace('.edf', '')
+        data_raw_file = (filename+'.edf')
         raw = mne.io.read_raw_edf(data_raw_file)
         df = raw.to_data_frame()
         df.to_csv(filename + '.csv', index=False)
@@ -14,6 +15,6 @@ def edf_to_csv(filename):
         f.close()
     else:
         print('Not a .edf file')
+    print("Complete")
 
 
-#edf_to_csv('S001R01.edf')

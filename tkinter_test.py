@@ -6,7 +6,7 @@ from tqdm import tk
 
 from edf_to_csv import *
 
-from plot_csv_tk import *
+from plot_csv import *
 
 
 def retrieve():

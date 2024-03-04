@@ -1,9 +1,12 @@
 import sys
 from PyQt5.QtWidgets import *
 
-from edf_to_csv import *
+import pandas as pd
+from matplotlib import pyplot as plt
 
-from plot_csv_tk import *
+from edf_to_csv import edf_to_csv
+
+from plot_csv import plot
 
 
 def convert():
