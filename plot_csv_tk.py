@@ -13,6 +13,7 @@ from pathlib import Path
 
 from edf_to_csv import edf_to_csv
 
+
 filename = 'chb01_01.edf'
 # note, for some reason run window always shows
 # "Extracting EDF parameters from C:\Users\R00212290\Desktop\Research Project\EEG-Viewer-Annotator\S001R01.edf..."
@@ -195,4 +196,4 @@ def plot(csv_data, col_names, min_time, max_time):
 
 #TEST
 #fig, axs = plot(pd.read_csv('chb01_02.csv'), ['FP1-F7', 'F7-T7'],1,120)
-#plt.show()
+#plt.show()/

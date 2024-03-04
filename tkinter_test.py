@@ -36,7 +36,7 @@ def load_csv():
     col_list = list(csv_data.columns.values.tolist())
 
     # make plot options appear
-    # make channel/plot options appear
+    # make channel/plot options appear?
 
     listbox.delete(0, END)
     for i in range(len(col_list)):
@@ -49,7 +49,9 @@ def plot_data():
     end = int(end_time.get())
     print(f"TEST - start {start}, end {end}")
 
-    fig, axs = plot(pd.read_csv('chb01_02.csv'), get_channels(), start, end)
+    csv_data = pd.read_csv(csv_file_path.get())
+
+    fig, axs = plot(csv_data, get_channels(), start, end)
     plt.show()
 
 
@@ -127,7 +129,7 @@ label = Label(time_frame, text="Channels")
 label.pack()
 
 listbox = Listbox(time_frame, selectmode="multiple")
-listbox.pack() ## not at top for some reason??
+listbox.pack()
 
 start_time = Entry(time_frame, width=20)
 start_time.insert(0, 'start')
@@ -146,7 +148,7 @@ time_amount.pack(padx=5, pady=5)
 
 #plot button
 
-plot_button = Button(time_frame, text="Plot (not working)", command=plot_data)
+plot_button = Button(time_frame, text="Plot", command=plot_data)
 plot_button.pack(padx=5, pady=5)
 
 #make plot appear
