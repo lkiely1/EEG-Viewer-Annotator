@@ -10,13 +10,20 @@ from plot_csv import plot
 
 
 def convert():
-    edf_to_csv(edf_file.get_file_path())
-    # change csv file field to name of converted csv?
+    path = edf_file.get_file_path()
+    edf_to_csv(path)
+
+    if path.endswith('.edf'):
+        csv_path = path.replace('.edf', '.csv')
+        csv_file.file_path.setText(csv_path)
 
 
 def load_csv():
     print("TEST")
     csv_data = pd.read_csv(csv_file.get_file_path())
+
+    for i in reversed(range(plot_options_layout.count())): # prevent duplicates
+        plot_options_layout.itemAt(i).widget().deleteLater()
 
     # need to clean header/column names (. in names causes problems, imagine will need more for other data)
     # e.g, clean_list = list of symbols to remove
@@ -54,13 +61,15 @@ def load_csv():
 
     # need to change something to prevent duplicates of widgets
     # maybe put in a separate layout, clear everytime "load" is pressed?
-    layout.addWidget(list_widget)
+    plot_options_layout.addWidget(list_widget)
 
-    layout.addWidget(start_time)
-    layout.addWidget(end_time)
-    layout.addWidget(amount_time)
+    plot_options_layout.addWidget(start_time)
+    plot_options_layout.addWidget(end_time)
+    plot_options_layout.addWidget(amount_time)
 
-    layout.addWidget(plot_button)
+    plot_options_layout.addWidget(plot_button)
+
+    layout.addLayout(plot_options_layout)
 
 
 def plot_data(csv_data, list_widget, start_time, end_time):
@@ -108,12 +117,14 @@ class DatasetFilePicker(QWidget): # class used to prevent duplicate code
             self.file_path.setText(file_path)
 
     def get_file_path(self):
+        print(self)
         return self.file_path.text() # returns string of path for convertor/loader
 
 
 app = QApplication(sys.argv)
 window = QWidget()
 layout = QVBoxLayout()
+plot_options_layout = QVBoxLayout() # declared here to prevent duplicates
 window.setLayout(layout)
 
 edf_file = DatasetFilePicker("Select EDF file to convert to CSV", convert, "Convert")
