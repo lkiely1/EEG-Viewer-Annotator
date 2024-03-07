@@ -1,8 +1,11 @@
 import sys
+
+import numpy as np
 from PyQt5.QtWidgets import *
 
 import pandas as pd
 from matplotlib import pyplot as plt
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 from edf_to_csv import edf_to_csv
 
@@ -60,7 +63,7 @@ def load_csv():
     # i think lambda lets you pass arguments into function when pressing a button?
 
     # need to change something to prevent duplicates of widgets
-    # maybe put in a separate layout, clear everytime "load" is pressed?
+    # maybe put in a separate options_layout, clear everytime "load" is pressed?
     plot_options_layout.addWidget(list_widget)
 
     plot_options_layout.addWidget(start_time)
@@ -69,7 +72,7 @@ def load_csv():
 
     plot_options_layout.addWidget(plot_button)
 
-    layout.addLayout(plot_options_layout)
+    options_layout.addLayout(plot_options_layout)
 
 
 def plot_data(csv_data, list_widget, start_time, end_time):
@@ -84,7 +87,13 @@ def plot_data(csv_data, list_widget, start_time, end_time):
     print(f"TEST - start {start}, end {end}, {channels}")
 
     fig, axs = plot(csv_data, channels, start, end)
+
+
     plt.show()
+
+    #window_layout.addLayout(plot_layout) # works but need to extend window to see. must fix
+    #plot_gui = PlotGui(csv_data, channels, start, end)
+    #plot_gui.show()
 
     # want to try add to the gui instead of seperate window
 
@@ -104,11 +113,11 @@ class DatasetFilePicker(QWidget): # class used to prevent duplicate code
         self.load_button = QPushButton(button_text) # "convert" or "load"
         self.load_button.clicked.connect(self.file_load)
 
-        layout = QVBoxLayout() # may change layout name
-        layout.addWidget(self.file_path)
-        layout.addWidget(self.browse_button)
-        layout.addWidget(self.load_button)
-        self.setLayout(layout)
+        options_layout = QVBoxLayout() # may change options_layout name
+        options_layout.addWidget(self.file_path)
+        options_layout.addWidget(self.browse_button)
+        options_layout.addWidget(self.load_button)
+        self.setLayout(options_layout)
 
     def browse_file(self):
         file_path, _ = QFileDialog.getOpenFileName(self, self.title, "", "All Files (*)")
@@ -121,17 +130,35 @@ class DatasetFilePicker(QWidget): # class used to prevent duplicate code
         return self.file_path.text() # returns string of path for convertor/loader
 
 
+class PlotGui(QWidget):
+    def __init__(self, csv, channels, start, end):
+        super().__init__()
+
+        self.setLayout(plot_layout)
+        canvas = self.create_plot(csv, channels, start, end)
+        plot_layout.addWidget(canvas)
+
+
+    def create_plot(self, csv, channels, start, end):
+        fig, axs = plot(csv, channels, start, end)
+        canvas = FigureCanvas(fig)
+        return canvas
+
+
 app = QApplication(sys.argv)
 window = QWidget()
-layout = QVBoxLayout()
+window_layout = QVBoxLayout()
+options_layout = QVBoxLayout()
 plot_options_layout = QVBoxLayout() # declared here to prevent duplicates
-window.setLayout(layout)
+plot_layout = QVBoxLayout()
+window.setLayout(window_layout)
+window_layout.addLayout(options_layout)
 
 edf_file = DatasetFilePicker("Select EDF file to convert to CSV", convert, "Convert")
-layout.addWidget(edf_file)
+options_layout.addWidget(edf_file)
 
 csv_file = DatasetFilePicker("Select CSV file to load", load_csv, "Load")
-layout.addWidget(csv_file)
+options_layout.addWidget(csv_file)
 
 # to do:
 # prevent duplicates of list box, time entries and plot button if reloads/loads different csv
