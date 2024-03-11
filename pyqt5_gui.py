@@ -5,6 +5,7 @@ from PyQt5.QtWidgets import *
 
 import pandas as pd
 from matplotlib import pyplot as plt
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 from edf_to_csv import edf_to_csv
@@ -88,12 +89,23 @@ def plot_data(csv_data, list_widget, start_time, end_time):
 
     fig, axs = plot(csv_data, channels, start, end)
 
+    """ annotations test
+        axs[0].annotate('test arrow', xy=(((start - end) * -1)/2, 1000), xytext=(3, 1.5),arrowprops=dict(facecolor='black', shrink=0.05),)
 
-    plt.show()
+        plt.text(((start - end) * - 1)/2, 500, "test", size=50, rotation=30.,ha="center", va="center",
+                 bbox=dict(boxstyle="round",
+                           ec=(1., 0.5, 0.5),
+                           fc=(1., 0.8, 0.8),
+                           )
+                 )
+        ### pcolor/pcolorfast didnt work, will try again
+        """
 
-    #window_layout.addLayout(plot_layout) # works but need to extend window to see. must fix
-    #plot_gui = PlotGui(csv_data, channels, start, end)
-    #plot_gui.show()
+    #plt.show()
+
+    window_layout.addLayout(plot_layout) # works but need to extend window to see. must fix
+    plot_gui = PlotGui(csv_data, channels, start, end)
+    plot_gui.show()
 
     # want to try add to the gui instead of seperate window
 
@@ -135,9 +147,13 @@ class PlotGui(QWidget):
         super().__init__()
 
         self.setLayout(plot_layout)
-        canvas = self.create_plot(csv, channels, start, end)
-        plot_layout.addWidget(canvas)
 
+        canvas = self.create_plot(csv, channels, start, end)
+
+        toolbar = NavigationToolbar(canvas, self)
+        plot_layout.addWidget(toolbar)
+
+        plot_layout.addWidget(canvas)
 
     def create_plot(self, csv, channels, start, end):
         fig, axs = plot(csv, channels, start, end)
