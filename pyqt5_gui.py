@@ -1,6 +1,7 @@
 import sys
 
 import numpy as np
+from PyQt5.QtGui import QIntValidator
 from PyQt5.QtWidgets import *
 
 import pandas as pd
@@ -50,13 +51,18 @@ def load_csv():
     list_widget.setSelectionMode(QListWidget.MultiSelection) # allows selecting multiple channels
 
     # text entries for time
+    int_validator = QIntValidator() # used to foce vals to be for int only
+
     start_time = QLineEdit()
+    start_time.setValidator(int_validator)
     start_time.setPlaceholderText("Start")
 
     end_time = QLineEdit()
+    end_time.setValidator(int_validator)
     end_time.setPlaceholderText("End")
 
     amount_time = QLineEdit()
+    amount_time.setValidator(int_validator)
     amount_time.setPlaceholderText("Amount of time")
 
     plot_button = QPushButton("Plot")
@@ -77,37 +83,44 @@ def load_csv():
 
 
 def plot_data(csv_data, list_widget, start_time, end_time):
-    start = int(start_time.text())
-    end = int(end_time.text())
+    # for input validation, need to get file length to compare here
+    if int(start_time.text()) < 0:
+        print('Start time invalid')
+    elif int(end_time.text()) < int(start_time.text()):
+        print('End time invalid')
+    else:
+        start = int(start_time.text())
+        end = int(end_time.text())
 
-    channels = []
+        channels = []
 
-    for item in list_widget.selectedItems():
-        channels.append(item.text())    # get selected channel from list widget
+        for item in list_widget.selectedItems():
+            channels.append(item.text())    # get selected channel from list widget
 
-    print(f"TEST - start {start}, end {end}, {channels}")
+        print(f"TEST - start {start}, end {end}, {channels}")
 
-    fig, axs = plot(csv_data, channels, start, end)
+        fig, axs = plot(csv_data, channels, start, end)
 
-    """ annotations test
+        #annotations test, seems to only work in seperate window?? must be something wrong with canvas
+        # arrow
         axs[0].annotate('test arrow', xy=(((start - end) * -1)/2, 1000), xytext=(3, 1.5),arrowprops=dict(facecolor='black', shrink=0.05),)
+        
+        # vline
+        axs[1].axvline(x = 40, color='red', linestyle='--')
 
-        plt.text(((start - end) * - 1)/2, 500, "test", size=50, rotation=30.,ha="center", va="center",
-                 bbox=dict(boxstyle="round",
-                           ec=(1., 0.5, 0.5),
-                           fc=(1., 0.8, 0.8),
-                           )
-                 )
-        ### pcolor/pcolorfast didnt work, will try again
-        """
+        # background colour
+        axs[2].axvspan(50,75,color='blue', alpha=0.5)
 
-    #plt.show()
 
-    window_layout.addLayout(plot_layout) # works but need to extend window to see. must fix
-    plot_gui = PlotGui(csv_data, channels, start, end)
-    plot_gui.show()
+        plt.show() #for outside of window plot
 
-    # want to try add to the gui instead of seperate window
+        #window_layout.addLayout(plot_layout) # works but need to extend window to see. must fix (TEMP FIX)
+        #plot_gui = PlotGui(csv_data, channels, start, end)
+        #plot_gui.show()
+
+        # text box (most likely not useful anyway, doesnt work for gui)
+        #plt.text(((start - end) * - 1) / 2, 500, "test", size=50, rotation=30., ha="center", va="center", bbox=dict
+        #(boxstyle="round", ec=(1., 0.5, 0.5), fc=(1., 0.8, 0.8), ))
 
 
 class DatasetFilePicker(QWidget): # class used to prevent duplicate code
@@ -148,16 +161,17 @@ class PlotGui(QWidget):
 
         self.setLayout(plot_layout)
 
-        canvas = self.create_plot(csv, channels, start, end)
+        self.canvas = self.create_plot(csv, channels, start, end)
 
-        toolbar = NavigationToolbar(canvas, self)
+        toolbar = NavigationToolbar(self.canvas, self)
         plot_layout.addWidget(toolbar)
 
-        plot_layout.addWidget(canvas)
+        plot_layout.addWidget(self.canvas)
+        window.resize(450, 900) # TEMP FIX, plot atleast can be seen
 
     def create_plot(self, csv, channels, start, end):
         fig, axs = plot(csv, channels, start, end)
-        canvas = FigureCanvas(fig)
+        canvas = FigureCanvas(figure=fig)
         return canvas
 
 
