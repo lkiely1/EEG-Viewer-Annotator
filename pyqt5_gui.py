@@ -120,6 +120,7 @@ def time_calculation(start, end, amount):
         print("Invalid")
         pass
 
+
 def plot_data(csv_data, list_widget, start_time, end_time):
     # for input validation, need to get file length to compare here
     if int(start_time.text()) < 0:
@@ -139,12 +140,9 @@ def plot_data(csv_data, list_widget, start_time, end_time):
 
         fig, axs = plot(csv_data, channels, start, end)
 
-
-
-
         #plt.show() #for outside of window plot
 
-        window_layout.addLayout(plot_layout) # works but need to extend window to see. must fix (TEMP FIX)
+        window_layout.addLayout(plot_layout, 0, 1) # works but need to extend window to see. must fix (TEMP FIX)
         plot_gui = PlotGui(csv_data, channels, start, end)
         plot_gui.show()
 
@@ -197,7 +195,7 @@ class PlotGui(QWidget):
         plot_layout.addWidget(toolbar)
 
         plot_layout.addWidget(self.canvas)
-        window.resize(450, 900) # TEMP FIX, plot atleast can be seen
+        window.resize(900, 450) # TEMP FIX, would like to change
 
     def create_plot(self, csv, channels, start, end):
         fig, axs = plot(csv, channels, start, end)
@@ -207,12 +205,12 @@ class PlotGui(QWidget):
 
 app = QApplication(sys.argv)
 window = QWidget()
-window_layout = QVBoxLayout()
+window_layout = QGridLayout()
 options_layout = QVBoxLayout()
 plot_options_layout = QVBoxLayout() # declared here to prevent duplicates
 plot_layout = QVBoxLayout()
 window.setLayout(window_layout)
-window_layout.addLayout(options_layout)
+window_layout.addLayout(options_layout, 0, 0)
 
 edf_file = DatasetFilePicker("Select EDF file to convert to CSV", convert, "Convert")
 options_layout.addWidget(edf_file)
