@@ -185,6 +185,18 @@ def plot(csv_data, col_names, min_time, max_time):
             ax.set_xlim(min_time, max_time)  # need to get min max ylims
 
         axs[-1].set(xlabel="Time (S)")
+
+        if len(col_names) > 2:
+            # annotations test, annotation code needs to be in this file to appear inside gui window!
+            # arrow
+            axs[0].annotate('test arrow', xy=(((min_time - max_time) * -1) / 2, 1000), xytext=(3, 1.5),
+                            arrowprops=dict(facecolor='black', shrink=0.05), )
+
+            # vline
+            axs[1].axvline(x=40, color='red', linestyle='--')
+
+            # background colour
+            axs[2].axvspan(50, 75, color='blue', alpha=0.3)
         # axs.set(ylabel="Amplitude/Voltage (uV)")
 
     else: # if only 1 in plot
