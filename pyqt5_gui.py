@@ -37,7 +37,13 @@ def load_csv():
     csv_data = pd.read_csv(csv_file.get_file_path())
 
     for i in reversed(range(plot_options_layout.count())): # prevent duplicates
-        plot_options_layout.itemAt(i).widget().deleteLater()
+        widget = plot_options_layout.itemAt(i).widget()
+        if widget is not None: # crash if try to delete None widget?
+            widget.setParent(None)
+            widget.deleteLater()
+
+    for i in reversed(range(time_layout.count())): # prevent duplicates
+        time_layout.itemAt(i).widget().deleteLater()
 
     # need to clean header/column names (. in names causes problems, imagine will need more for other data)
     # e.g, clean_list = list of symbols to remove
@@ -54,7 +60,7 @@ def load_csv():
 
     list_widget = QListWidget()
 
-    list_widget.clear() # need to clear list, not working as intended at the moment
+    list_widget.clear() # not sure if still need this
 
     list_widget.addItems(col_list)
     list_widget.setSelectionMode(QListWidget.MultiSelection) # allows selecting multiple channels
@@ -85,14 +91,15 @@ def load_csv():
     plot_button.clicked.connect(lambda: plot_data(csv_data, list_widget, start_time, end_time))
     # i think lambda lets you pass arguments into function when pressing a button?
 
-    plot_options_layout.addWidget(list_widget)
-    plot_options_layout.addWidget(list_select_all)
-    plot_options_layout.addWidget(list_deselect_all)
+    plot_options_layout.addWidget(list_widget, 0, 0, 1, 2)
+    plot_options_layout.addWidget(list_select_all, 1, 0)
+    plot_options_layout.addWidget(list_deselect_all, 1, 1)
 
-
-    plot_options_layout.addWidget(start_time)
-    plot_options_layout.addWidget(end_time)
-    plot_options_layout.addWidget(amount_time)
+    time_layout.addWidget(start_time)
+    time_layout.addWidget(end_time)
+    time_layout.addWidget(amount_time)
+    time_layout.addWidget(plot_button)
+    plot_options_layout.addLayout(time_layout, 0, 2)
 
     # onchange
 
@@ -100,9 +107,7 @@ def load_csv():
     end_time.textChanged.connect(lambda: time_calculation(start_time, end_time, amount_time))
     amount_time.textChanged.connect(lambda: time_calculation(start_time, end_time, amount_time))
 
-    plot_options_layout.addWidget(plot_button)
-
-    options_layout.addLayout(plot_options_layout)
+    file_layout.addLayout(plot_options_layout)
 
 
 def time_calculation(start, end, amount):
@@ -123,9 +128,13 @@ def time_calculation(start, end, amount):
 
 def plot_data(csv_data, list_widget, start_time, end_time):
     # for input validation, need to get file length to compare here
-    if int(start_time.text()) < 0:
+
+    for i in reversed(range(plot_layout.count())): # prevent duplicates (though might be useful if want to compare data)
+        plot_layout.itemAt(i).widget().deleteLater()
+
+    if int(start_time.text()) < 0 or start_time.text() == "":
         print('Start time invalid')
-    elif int(end_time.text()) < int(start_time.text()):
+    elif int(end_time.text()) < int(start_time.text()) or start_time.text() == "":
         print('End time invalid')
     else:
         start = int(start_time.text())
@@ -166,11 +175,12 @@ class DatasetFilePicker(QWidget): # class used to prevent duplicate code
         self.load_button = QPushButton(button_text) # "convert" or "load"
         self.load_button.clicked.connect(self.file_load)
 
-        options_layout = QVBoxLayout() # may change options_layout name
-        options_layout.addWidget(self.file_path)
-        options_layout.addWidget(self.browse_button)
-        options_layout.addWidget(self.load_button)
-        self.setLayout(options_layout)
+        self.layout = QHBoxLayout()
+        self.layout.addWidget(self.file_path)
+        self.layout.addWidget(self.browse_button)
+        self.layout.addWidget(self.load_button)
+        self.setLayout(self.layout)
+        file_layout.addLayout(self.layout)
 
     def browse_file(self):
         file_path, _ = QFileDialog.getOpenFileName(self, self.title, "", "All Files (*)")
@@ -206,17 +216,19 @@ class PlotGui(QWidget):
 app = QApplication(sys.argv)
 window = QWidget()
 window_layout = QGridLayout()
-options_layout = QVBoxLayout()
-plot_options_layout = QVBoxLayout() # declared here to prevent duplicates
+
+file_layout = QVBoxLayout()
+plot_options_layout = QGridLayout() # declared here to prevent duplicates
+time_layout = QVBoxLayout()
 plot_layout = QVBoxLayout()
 window.setLayout(window_layout)
-window_layout.addLayout(options_layout, 0, 0)
+window_layout.addLayout(file_layout, 0, 0)
 
 edf_file = DatasetFilePicker("Select EDF file to convert to CSV", convert, "Convert")
-options_layout.addWidget(edf_file)
+file_layout.addWidget(edf_file)
 
 csv_file = DatasetFilePicker("Select CSV file to load", load_csv, "Load")
-options_layout.addWidget(csv_file)
+file_layout.addWidget(csv_file)
 
 # to do:
 # prevent duplicates of list box, time entries and plot button if reloads/loads different csv
