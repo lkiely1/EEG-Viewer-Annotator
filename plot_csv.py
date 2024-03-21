@@ -204,9 +204,16 @@ def plot(csv_data, col_names, min_time, max_time):
         # axs.set(ylabel="Amplitude/Voltage (uV)")
 
         #call annotate function (testing)
-        annotate("bg", 50, 75, 0, "none")
-        annotate("arrow", 75, 100, 1, "Arrow")
-        annotate("line", 30, 0, 2, "none")
+        #annotate("bg", 50, 75, 0, "none")
+        #annotate("arrow", 75, 100, 1, "Arrow")
+        #annotate("line", 30, 0, 2, "none")
+
+        with open('annotation_test_file.txt', 'r') as file:
+            for line in file:
+                print()
+                if line != "":
+                    annotation = line.strip('\n').split(',')
+                    annotate(annotation[0], int(annotation[1]), int(annotation[2]), 0, annotation[3])
 
     else: # if only 1 in plot
         print("only 1 channel in plot")

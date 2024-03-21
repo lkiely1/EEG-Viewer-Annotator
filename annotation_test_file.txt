@@ -1,0 +1,11 @@
+bg,12,44,
+bg,33,78,
+arrow,66,32,test arrow
+line,104,0,
+line,75,0,
+line,89,0,
+line,77,0,
+arrow,21,29,test test arrow 
+bg,99,120,
+line,23,0,
+arrow,3,9,last test
