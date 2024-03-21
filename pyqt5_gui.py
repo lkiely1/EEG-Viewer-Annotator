@@ -201,11 +201,12 @@ class PlotGui(QWidget):
 
         self.canvas = self.create_plot(csv, channels, start, end)
 
+        self.canvas.setMinimumWidth(450) # i think this is an ok fix? will ask if it shouldn't be hard coded like this
+
         toolbar = NavigationToolbar(self.canvas, self)
         plot_layout.addWidget(toolbar)
 
         plot_layout.addWidget(self.canvas)
-        window.resize(900, 450) # TEMP FIX, would like to change
 
     def create_plot(self, csv, channels, start, end):
         fig, axs = plot(csv, channels, start, end)
