@@ -1,6 +1,7 @@
 import sys
 
 import numpy as np
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIntValidator
 from PyQt5.QtWidgets import *
 
@@ -34,7 +35,7 @@ class DatasetFilePicker(QWidget): # class used to prevent duplicate code
         self.layout.addWidget(self.browse_button)
         self.layout.addWidget(self.load_button)
         self.setLayout(self.layout)
-        file_layout.addLayout(self.layout)
+        main_layout.addLayout(self.layout)
 
     def browse_file(self):
         file_path, _ = QFileDialog.getOpenFileName(self, self.title, "", "All Files (*)")
@@ -48,17 +49,17 @@ class DatasetFilePicker(QWidget): # class used to prevent duplicate code
 
 
 def convert():
-    path = edf_file.get_file_path()
+    path = main_widget.edf_file.get_file_path()
     edf_to_csv(path)
 
     if path.endswith('.edf'):
         csv_path = path.replace('.edf', '.csv')
-        csv_file.file_path.setText(csv_path)
+        main_widget.csv_file.file_path.setText(csv_path)
 
 
 def load_csv():
     print("TEST")
-    csv_data = pd.read_csv(csv_file.get_file_path())
+    csv_data = pd.read_csv(main_widget.csv_file.get_file_path())
 
     for i in reversed(range(plot_options_layout.count())): # prevent duplicates
         widget = plot_options_layout.itemAt(i).widget()
@@ -145,7 +146,7 @@ def load_csv():
     end_time.textChanged.connect(lambda: time_calculation(start_time, end_time, amount_time, int(file_length)))
     amount_time.textChanged.connect(lambda: time_calculation(start_time, end_time, amount_time, int(file_length)))
 
-    file_layout.addLayout(plot_options_layout)
+    main_layout.addLayout(plot_options_layout)
 
 
 def select_all(col_list):
@@ -208,16 +209,19 @@ def plot_data(csv_data, list_widget, start_time, end_time):
 
         #plt.show() #for outside of window plot
 
-        window_layout.addLayout(plot_layout, 0, 1) # works but need to extend window to see. must fix (TEMP FIX)
-        plot_gui = PlotGui(csv_data, channels, start, end)
+        plot_gui = PlotGuiWidget(csv_data, channels, start, end)
+        plot_splitter.addWidget(main_widget)
+        plot_splitter.addWidget(plot_gui)
+        plot_splitter.setStretchFactor(0, 500)
+        plot_splitter.setStretchFactor(1, 100)
+        window_layout.addWidget(plot_splitter)
         plot_gui.show()
-
         # text box (most likely not useful anyway, doesnt work for gui)
         #plt.text(((start - end) * - 1) / 2, 500, "test", size=50, rotation=30., ha="center", va="center", bbox=dict
         #(boxstyle="round", ec=(1., 0.5, 0.5), fc=(1., 0.8, 0.8), ))
 
 
-class PlotGui(QWidget):
+class PlotGuiWidget(QWidget):
     def __init__(self, csv, channels, start, end):
         super().__init__()
 
@@ -238,26 +242,35 @@ class PlotGui(QWidget):
         return canvas
 
 
+class MainGuiWidget(QWidget):
+    def __init__(self):
+        super().__init__()
+
+        self.setLayout(main_layout)
+
+        self.edf_file = DatasetFilePicker("Select EDF file to convert to CSV", convert, "Convert")
+        main_layout.addWidget(self.edf_file)
+
+        self.csv_file = DatasetFilePicker("Select CSV file to load", load_csv, "Load")
+        main_layout.addWidget(self.csv_file)
+
+
 app = QApplication(sys.argv)
 window = QWidget()
-window_layout = QGridLayout()
+window_layout = QHBoxLayout()
 
-file_layout = QVBoxLayout()
+plot_splitter = QSplitter(Qt.Horizontal)
+
+main_layout = QVBoxLayout() # layout all other layouts are added to
 plot_options_layout = QGridLayout() # declared here to prevent duplicates
 time_layout = QVBoxLayout()
 plot_layout = QVBoxLayout()
 window.setLayout(window_layout)
-window_layout.addLayout(file_layout, 0, 0)
 
-edf_file = DatasetFilePicker("Select EDF file to convert to CSV", convert, "Convert")
-file_layout.addWidget(edf_file)
 
-csv_file = DatasetFilePicker("Select CSV file to load", load_csv, "Load")
-file_layout.addWidget(csv_file)
+window_layout.addLayout(main_layout)
 
-# to do:
-# prevent duplicates of list box, time entries and plot button if reloads/loads different csv
-# try make plot appear in the gui?
+main_widget = MainGuiWidget()
 
 window.show()
 
