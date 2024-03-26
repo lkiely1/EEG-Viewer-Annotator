@@ -267,10 +267,8 @@ time_layout = QVBoxLayout()
 plot_layout = QVBoxLayout()
 window.setLayout(window_layout)
 
-
-window_layout.addLayout(main_layout)
-
 main_widget = MainGuiWidget()
+window_layout.addWidget(main_widget)
 
 window.show()
 
