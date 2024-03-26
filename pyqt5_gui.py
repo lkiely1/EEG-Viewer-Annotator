@@ -14,6 +14,39 @@ from edf_to_csv import edf_to_csv
 from plot_csv import plot
 
 
+class DatasetFilePicker(QWidget): # class used to prevent duplicate code
+    def __init__(self, title, file_load, button_text):
+        super().__init__()
+        self.title = title # text at top of window when selecting file
+        self.file_load = file_load # if loading edf or csv
+
+        self.file_path = QLineEdit() # file path as text
+        self.file_path.setReadOnly(True) # disable editing file path (may change later?)
+
+        self.browse_button = QPushButton("Browse")
+        self.browse_button.clicked.connect(self.browse_file)
+
+        self.load_button = QPushButton(button_text) # "convert" or "load"
+        self.load_button.clicked.connect(self.file_load)
+
+        self.layout = QHBoxLayout()
+        self.layout.addWidget(self.file_path)
+        self.layout.addWidget(self.browse_button)
+        self.layout.addWidget(self.load_button)
+        self.setLayout(self.layout)
+        file_layout.addLayout(self.layout)
+
+    def browse_file(self):
+        file_path, _ = QFileDialog.getOpenFileName(self, self.title, "", "All Files (*)")
+        # may change "all files" for edf or csv only (if figure out how to do either), may need "file_type" variable
+        if file_path:
+            self.file_path.setText(file_path)
+
+    def get_file_path(self):
+        print(self)
+        return self.file_path.text() # returns string of path for convertor/loader
+
+
 def convert():
     path = edf_file.get_file_path()
     edf_to_csv(path)
@@ -21,15 +54,6 @@ def convert():
     if path.endswith('.edf'):
         csv_path = path.replace('.edf', '.csv')
         csv_file.file_path.setText(csv_path)
-
-
-def select_all(col_list):
-    for i in range(col_list.count()):
-        col_list.item(i).setSelected(True)
-
-
-def deselect_all(col_list):
-    col_list.clearSelection()
 
 
 def load_csv():
@@ -71,8 +95,21 @@ def load_csv():
     list_deselect_all = QPushButton('Deselect All') # clears selection
     list_deselect_all.clicked.connect(lambda: deselect_all(list_widget))
 
+    time_freq = 0  # figure out better way to get time from edf
+    for index, row in csv_data.iterrows():
+        if row['time'] != 1:
+            time_freq += 1
+        elif row['time'] == 1:
+            # print(row['time'])
+            break
+    file_length = len(csv_data) / time_freq
+    print(f"test, {file_length}")
+
+    # label to let user know how long file is
+    data_time = QLabel(f"Length of data: {int(file_length)}s")
+
     # text entries for time
-    int_validator = QIntValidator() # used to foce vals to be for int only
+    int_validator = QIntValidator(0, int(file_length)) # used to force vals to be for int only
 
     start_time = QLineEdit()
     start_time.setValidator(int_validator)
@@ -95,6 +132,7 @@ def load_csv():
     plot_options_layout.addWidget(list_select_all, 1, 0)
     plot_options_layout.addWidget(list_deselect_all, 1, 1)
 
+    time_layout.addWidget(data_time)
     time_layout.addWidget(start_time)
     time_layout.addWidget(end_time)
     time_layout.addWidget(amount_time)
@@ -103,15 +141,26 @@ def load_csv():
 
     # onchange
 
-    start_time.textChanged.connect(lambda: time_calculation(start_time, end_time, amount_time))
-    end_time.textChanged.connect(lambda: time_calculation(start_time, end_time, amount_time))
-    amount_time.textChanged.connect(lambda: time_calculation(start_time, end_time, amount_time))
+    start_time.textChanged.connect(lambda: time_calculation(start_time, end_time, amount_time, int(file_length)))
+    end_time.textChanged.connect(lambda: time_calculation(start_time, end_time, amount_time, int(file_length)))
+    amount_time.textChanged.connect(lambda: time_calculation(start_time, end_time, amount_time, int(file_length)))
 
     file_layout.addLayout(plot_options_layout)
 
 
-def time_calculation(start, end, amount):
-    try: # currently need way to clear all 3 values + let user still edit amount value
+def select_all(col_list):
+    for i in range(col_list.count()):
+        col_list.item(i).setSelected(True)
+
+
+def deselect_all(col_list):
+    col_list.clearSelection()
+
+
+def time_calculation(start, end, amount, max_length): # maybe change so not predefined? not sure if would work
+    print(f"{str(start.text())}, {str(end.text())}, {str(amount.text())}, {max_length}")# for testing
+    try: # currently if user tries to clear entry later, runs function twice to get val again. not sure how to stop
+        # also must be why cant change amount value
         if start.text() != "" and end.text() != "":
             new_amount = (int(start.text()) - int(end.text())) * -1
             amount.setText(str(new_amount))
@@ -121,8 +170,16 @@ def time_calculation(start, end, amount):
         elif end.text() != "" and amount.text() != "":
             new_start = int(amount.text()) - int(end.text())
             start.setText(str(new_start))
+
+        if int(start.text()) < 0: # used to keep all 3 valus in range 0 - file_length
+            start.setText(str(0))
+        if int(end.text()) > max_length:
+            end.setText(str(max_length))
+        if int(amount.text()) > max_length:
+            amount.setText(str(max_length))
+
     except ValueError:
-        print("Invalid")
+        print("Invalid value") # sometimes prints for what seems like no reason?
         pass
 
 
@@ -160,39 +217,6 @@ def plot_data(csv_data, list_widget, start_time, end_time):
         #(boxstyle="round", ec=(1., 0.5, 0.5), fc=(1., 0.8, 0.8), ))
 
 
-class DatasetFilePicker(QWidget): # class used to prevent duplicate code
-    def __init__(self, title, file_load, button_text):
-        super().__init__()
-        self.title = title # text at top of window when selecting file
-        self.file_load = file_load # if loading edf or csv
-
-        self.file_path = QLineEdit() # file path as text
-        self.file_path.setReadOnly(True) # disable editing file path (may change later?)
-
-        self.browse_button = QPushButton("Browse")
-        self.browse_button.clicked.connect(self.browse_file)
-
-        self.load_button = QPushButton(button_text) # "convert" or "load"
-        self.load_button.clicked.connect(self.file_load)
-
-        self.layout = QHBoxLayout()
-        self.layout.addWidget(self.file_path)
-        self.layout.addWidget(self.browse_button)
-        self.layout.addWidget(self.load_button)
-        self.setLayout(self.layout)
-        file_layout.addLayout(self.layout)
-
-    def browse_file(self):
-        file_path, _ = QFileDialog.getOpenFileName(self, self.title, "", "All Files (*)")
-        # may change "all files" for edf or csv only (if figure out how to do either), may need "file_type" variable
-        if file_path:
-            self.file_path.setText(file_path)
-
-    def get_file_path(self):
-        print(self)
-        return self.file_path.text() # returns string of path for convertor/loader
-
-
 class PlotGui(QWidget):
     def __init__(self, csv, channels, start, end):
         super().__init__()
@@ -201,7 +225,7 @@ class PlotGui(QWidget):
 
         self.canvas = self.create_plot(csv, channels, start, end)
 
-        self.canvas.setMinimumWidth(450) # i think this is an ok fix? will ask if it shouldn't be hard coded like this
+        self.canvas.setMinimumWidth(450)    # i think this is an ok fix? will ask if it shouldn't be hard coded like this
 
         toolbar = NavigationToolbar(self.canvas, self)
         plot_layout.addWidget(toolbar)

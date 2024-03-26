@@ -186,20 +186,20 @@ def plot(csv_data, col_names, min_time, max_time):
 
         axs[-1].set(xlabel="Time (S)")
 
-        def annotate(annotate_type, annotate_start_or_x_coord, annotate_end_or_y_coord, annotation_num, label):
+        def annotate(annotate_type, x_or_x1, y_or_x2, annotation_num, label):
             for i in range(len(col_names)):
                 col = "red" # how do i assign colours to colour num??
 
                 if annotate_type == "bg":
                     # background colour
-                    axs[i].axvspan(annotate_start_or_x_coord, annotate_end_or_y_coord, color=col, alpha=0.3)
+                    axs[i].axvspan(x_or_x1, y_or_x2, color=col, alpha=0.3)
 
                 elif annotate_type == "arrow":
-                    axs[i].annotate(label, xy=(annotate_start_or_x_coord, annotate_end_or_y_coord), xytext=(3, 1.5),
+                    axs[i].annotate(label, xy=(x_or_x1, y_or_x2), xytext=(3, 1.5),
                                     arrowprops=dict(facecolor=col, shrink=0.05), )
 
                 elif annotate_type == "line":
-                    axs[i].axvline(x=annotate_start_or_x_coord, color=col, linestyle='--')
+                    axs[i].axvline(x=x_or_x1, color=col, linestyle='--')
 
         # axs.set(ylabel="Amplitude/Voltage (uV)")
 
