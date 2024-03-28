@@ -1,4 +1,5 @@
 x = True
+annotation_num = 0
 while x:
     with open('annotation_test_file.txt', 'a') as file:
         print("1) Background colour")
@@ -42,13 +43,14 @@ while x:
             print("Invalid input. Select 1) Background colour, 2) Arrow, 3)Line")
             continue
 
-        file.write(f'{annotation_type},{annotation_x},{annotation_x2},{annotation_y},{label}')
+        file.write(f'{annotation_type},{annotation_num},{annotation_x},{annotation_x2},{annotation_y},{label}')
         file.write('\n')
 
         continue_program = 'a'
         while continue_program.lower() != 'y' or continue_program.lower() != 'n':
             continue_program = input("Do you want to add another? (y/n) ")
             if continue_program.lower() == 'y':
+                annotation_num += 1
                 break
             elif continue_program.lower() == 'n':
                 file.close()
