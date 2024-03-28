@@ -11,6 +11,8 @@ import matplotlib.pyplot as plt
 import os.path
 from pathlib import Path
 
+from matplotlib.patches import Rectangle
+
 from edf_to_csv import edf_to_csv
 
 #filename = 'chb01_01.edf'
@@ -186,34 +188,42 @@ def plot(csv_data, col_names, min_time, max_time):
 
         axs[-1].set(xlabel="Time (S)")
 
-        def annotate(annotate_type, x_or_x1, y_or_x2, annotation_num, label):
+        def annotate(annotate_type, annotation_x, annotation_x2, annotation_y, annotation_num, label):
             for i in range(len(col_names)):
                 col = "red" # how do i assign colours to colour num??
 
                 if annotate_type == "bg":
                     # background colour
-                    axs[i].axvspan(x_or_x1, y_or_x2, color=col, alpha=0.3)
+                    axs[i].axvspan(annotation_x, annotation_x2, color=col, alpha=0.3)
+                    axs[i].annotate(label, ((annotation_x + (((annotation_x2 - annotation_x)*-1)/2)), 100))
 
                 elif annotate_type == "arrow":
-                    axs[i].annotate(label, xy=(x_or_x1, y_or_x2), xytext=(3, 1.5),
-                                    arrowprops=dict(facecolor=col, shrink=0.05), )
+                    axs[i].annotate(label, xy=(annotation_x, annotation_y),
+                                    xytext=(annotation_x - 10, annotation_y + 10),
+                                    arrowprops=dict(facecolor=col, shrink=0.05))
 
                 elif annotate_type == "line":
-                    axs[i].axvline(x=x_or_x1, color=col, linestyle='--')
+                    axs[i].axvline(x=annotation_x, color=col, linestyle='--')
+                    axs[i].annotate(label, ((annotation_x + 1), 100))
 
-        # axs.set(ylabel="Amplitude/Voltage (uV)")
+                elif annotate_type == "box":
+                    axs[i].add_patch(Rectangle((annotation_x, annotation_y), annotation_x2, 500,
+                                     edgecolor=col, fill=False, linewidth=5))
+                    axs[i].annotate(label, ((annotation_x + (annotation_x2/2)), annotation_y + 50))
 
-        #call annotate function (testing)
-        #annotate("bg", 50, 75, 0, "none")
-        #annotate("arrow", 75, 100, 1, "Arrow")
-        #annotate("line", 30, 0, 2, "none")
+                elif annotate_type == "bar":
+                    axs[i].add_patch(Rectangle((annotation_x, -400), annotation_x2, 75,
+                                     facecolor=col, fill=True))
+                    axs[i].annotate(label, ((annotation_x + (annotation_x2/2)), -300))
+
+        # axs.set(ylabel="Amplitude/Voltage (uV)") # not sure how to add back
 
         with open('annotation_test_file.txt', 'r') as file:
             for line in file:
                 print()
                 if line != "":
                     annotation = line.strip('\n').split(',')
-                    annotate(annotation[0], int(annotation[1]), int(annotation[2]), 0, annotation[3])
+                    annotate(annotation[0], int(annotation[1]), int(annotation[2]), int(annotation[3]), 0, annotation[4])
 
     else: # if only 1 in plot
         print("only 1 channel in plot")

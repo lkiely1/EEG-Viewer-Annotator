@@ -211,10 +211,14 @@ def plot_data(csv_data, list_widget, start_time, end_time):
 
         plot_gui = PlotGuiWidget(csv_data, channels, start, end)
         plot_splitter.addWidget(main_widget)
-        plot_splitter.addWidget(plot_gui)
-        plot_splitter.setStretchFactor(0, 500)
+        plot_splitter.addWidget(plot_gui) # need to check if alerady exists first and then delete/dont add
+        plot_splitter.setStretchFactor(0, 500) # not sure how exactly works rn
         plot_splitter.setStretchFactor(1, 100)
-        window_layout.addWidget(plot_splitter)
+
+        plot_splitter.setCollapsible(0, False)
+        plot_splitter.setCollapsible(1, False)
+
+        window_layout.addWidget(plot_splitter) # need to check if alerady exists first and then delete/dont add
         plot_gui.show()
         # text box (most likely not useful anyway, doesnt work for gui)
         #plt.text(((start - end) * - 1) / 2, 500, "test", size=50, rotation=30., ha="center", va="center", bbox=dict
