@@ -1,5 +1,6 @@
 import sys
 
+import mne
 import numpy as np
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIntValidator
@@ -13,6 +14,8 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from edf_to_csv import edf_to_csv
 
 from plot_csv import plot
+
+dev_mode = 0 # 0 means load edf, 1 means load csv
 
 
 class DatasetFilePicker(QWidget): # class used to prevent duplicate code
@@ -54,12 +57,17 @@ def convert():
 
     if path.endswith('.edf'):
         csv_path = path.replace('.edf', '.csv')
-        main_widget.csv_file.file_path.setText(csv_path)
+        main_widget.dataset_file.file_path.setText(csv_path)
 
 
-def load_csv():
+def load_dataset():
     print("TEST")
-    csv_data = pd.read_csv(main_widget.csv_file.get_file_path())
+    if dev_mode == 0: # load edf
+        raw = mne.io.read_raw_edf(main_widget.dataset_file.get_file_path())
+        data = raw.to_data_frame()
+        time_freq = raw.info['sfreq']
+    elif dev_mode == 1: # load csv
+        data = pd.read_csv(main_widget.dataset_file.get_file_path())
 
     for i in reversed(range(plot_options_layout.count())): # prevent duplicates
         widget = plot_options_layout.itemAt(i).widget()
@@ -75,9 +83,9 @@ def load_csv():
     # for i in clean_list:
     # below line but '.' replaced with i so everything in list is removed from col names
 
-    csv_data.columns = csv_data.columns.str.replace('.', '') # for cleaning
+    data.columns = data.columns.str.replace('.', '') # for cleaning
 
-    col_list = list(csv_data.columns.values.tolist())
+    col_list = list(data.columns.values.tolist())
     col_list.pop(0) # remove time column
 
     # make plot options appear
@@ -96,14 +104,16 @@ def load_csv():
     list_deselect_all = QPushButton('Deselect All') # clears selection
     list_deselect_all.clicked.connect(lambda: deselect_all(list_widget))
 
-    time_freq = 0  # figure out better way to get time from edf
-    for index, row in csv_data.iterrows():
-        if row['time'] != 1:
-            time_freq += 1
-        elif row['time'] == 1:
-            # print(row['time'])
-            break
-    file_length = len(csv_data) / time_freq
+    if dev_mode == 1:
+        time_freq = 0  # figure out better way to get time from edf
+        for index, row in data.iterrows():
+            if row['time'] != 1:
+                time_freq += 1
+            elif row['time'] == 1:
+                # print(row['time'])
+                break
+
+    file_length = len(data) / time_freq
     print(f"test, {file_length}")
 
     # label to let user know how long file is
@@ -126,7 +136,7 @@ def load_csv():
 
 
     plot_button = QPushButton("Plot")
-    plot_button.clicked.connect(lambda: plot_data(csv_data, list_widget, start_time, end_time))
+    plot_button.clicked.connect(lambda: plot_data(data, list_widget, start_time, end_time))
     # i think lambda lets you pass arguments into function when pressing a button?
 
     plot_options_layout.addWidget(list_widget, 0, 0, 1, 2)
@@ -184,7 +194,7 @@ def time_calculation(start, end, amount, max_length): # maybe change so not pred
         pass
 
 
-def plot_data(csv_data, list_widget, start_time, end_time):
+def plot_data(data, list_widget, start_time, end_time):
     # for input validation, need to get file length to compare here
 
     for i in reversed(range(plot_layout.count())): # prevent duplicates (though might be useful if want to compare data)
@@ -205,24 +215,33 @@ def plot_data(csv_data, list_widget, start_time, end_time):
 
         print(f"TEST - start {start}, end {end}, {channels}")
 
-        fig, axs = plot(csv_data, channels, start, end)
+        fig, axs = plot(data, channels, start, end)
 
         #plt.show() #for outside of window plot
 
-        plot_gui = PlotGuiWidget(csv_data, channels, start, end)
-        plot_splitter.addWidget(main_widget)
-        plot_splitter.addWidget(plot_gui) # need to check if alerady exists first and then delete/dont add
-        plot_splitter.setStretchFactor(0, 500) # not sure how exactly works rn
-        plot_splitter.setStretchFactor(1, 100)
+        plot_gui = PlotGuiWidget(data, channels, start, end)
 
-        plot_splitter.setCollapsible(0, False)
-        plot_splitter.setCollapsible(1, False)
+        plot_splitter = QSplitter(Qt.Horizontal) # if remove atm cant plot twice, (canvas disappears), on 3rd crash
 
-        window_layout.addWidget(plot_splitter) # need to check if alerady exists first and then delete/dont add
+        for i in reversed(range(window_layout.count())):  # kind of works?
+            splitter_exists = False
+            if window_layout.itemAt(i).widget() == plot_splitter:
+                #plot_splitter.deleteLater()
+                #plot_splitter = QSplitter(Qt.Horizontal)
+                splitter_exists = True
+
+            if not splitter_exists:
+
+                plot_splitter.addWidget(main_widget)
+                plot_splitter.addWidget(plot_gui) # dont do if exists? unsure how to check
+                plot_splitter.setStretchFactor(0, 500) # not sure how exactly works rn
+                plot_splitter.setStretchFactor(1, 100)
+
+                plot_splitter.setCollapsible(0, False)
+                plot_splitter.setCollapsible(1, False)
+
+                window_layout.addWidget(plot_splitter)
         plot_gui.show()
-        # text box (most likely not useful anyway, doesnt work for gui)
-        #plt.text(((start - end) * - 1) / 2, 500, "test", size=50, rotation=30., ha="center", va="center", bbox=dict
-        #(boxstyle="round", ec=(1., 0.5, 0.5), fc=(1., 0.8, 0.8), ))
 
 
 class PlotGuiWidget(QWidget):
@@ -251,19 +270,22 @@ class MainGuiWidget(QWidget):
         super().__init__()
 
         self.setLayout(main_layout)
+        load_title = "Select EDF file to load"
 
-        self.edf_file = DatasetFilePicker("Select EDF file to convert to CSV", convert, "Convert")
-        main_layout.addWidget(self.edf_file)
+        if dev_mode == 1:
+            self.edf_file = DatasetFilePicker("Select EDF file to convert to CSV", convert, "Convert")
+            main_layout.addWidget(self.edf_file)
+            load_title = "Select CSV file to load"
 
-        self.csv_file = DatasetFilePicker("Select CSV file to load", load_csv, "Load")
-        main_layout.addWidget(self.csv_file)
+        self.dataset_file = DatasetFilePicker(load_title, load_dataset, "Load")
+        main_layout.addWidget(self.dataset_file)
 
 
 app = QApplication(sys.argv)
 window = QWidget()
 window_layout = QHBoxLayout()
 
-plot_splitter = QSplitter(Qt.Horizontal)
+#plot_splitter = QSplitter(Qt.Horizontal)
 
 main_layout = QVBoxLayout() # layout all other layouts are added to
 plot_options_layout = QGridLayout() # declared here to prevent duplicates
