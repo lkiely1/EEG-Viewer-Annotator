@@ -5,7 +5,7 @@ def edf_to_csv(filename):
     if filename.endswith('.edf'):
         filename = filename.replace('.edf', '')
         data_raw_file = (filename+'.edf')
-        annot = mne.read_annotations(data_raw_file) # annots  shown in debug
+        annot = mne.read_annotations(data_raw_file) # shows annotations if exist, shown in debug
 
         raw = mne.io.read_raw_edf(data_raw_file)
 

@@ -15,7 +15,7 @@ from edf_to_csv import edf_to_csv
 
 from plot_csv import plot
 
-dev_mode = 0 # 0 means load edf, 1 means load csv
+dev_mode = 0 # 0 means load edf, 1 means load csv or convert
 
 
 class DatasetFilePicker(QWidget): # class used to prevent duplicate code
@@ -152,9 +152,9 @@ def load_dataset():
 
     # onchange
 
-    start_time.textChanged.connect(lambda: time_calculation(start_time, end_time, amount_time, int(file_length)))
-    end_time.textChanged.connect(lambda: time_calculation(start_time, end_time, amount_time, int(file_length)))
-    amount_time.textChanged.connect(lambda: time_calculation(start_time, end_time, amount_time, int(file_length)))
+    start_time.textChanged.connect(lambda: time_calculation(start_time, end_time, amount_time, int(file_length), 1))
+    end_time.textChanged.connect(lambda: time_calculation(start_time, end_time, amount_time, int(file_length), 2))
+    amount_time.textChanged.connect(lambda: time_calculation(start_time, end_time, amount_time, int(file_length), 3))
 
     main_layout.addLayout(plot_options_layout)
 
@@ -168,24 +168,32 @@ def deselect_all(col_list):
     col_list.clearSelection()
 
 
-def time_calculation(start, end, amount, max_length): # maybe change so not predefined? not sure if would work
-    print(f"{str(start.text())}, {str(end.text())}, {str(amount.text())}, {max_length}")# for testing
+def time_calculation(start, end, amount, max_length, case): # maybe change so not predefined? not sure if would work
+    print(f"{str(start.text())}, {str(end.text())}, {str(amount.text())}, {max_length}, {case}")# for testing
     try: # currently if user tries to clear entry later, runs function twice to get val again. not sure how to stop
         # also must be why cant change amount value
-        if start.text() != "" and end.text() != "":
+        if start.text() != "" and end.text() != "" and (case == 1 or case == 2):
             new_amount = (int(start.text()) - int(end.text())) * -1
             amount.setText(str(new_amount))
-        elif start.text() != "" and amount.text() != "":
+        elif start.text() != "" and amount.text() != "" and (case == 1 or case == 3):
             new_end = int(start.text()) + int(amount.text())
             end.setText(str(new_end))
-        elif end.text() != "" and amount.text() != "":
+        elif end.text() != "" and amount.text() != "" and (case == 2 or case == 3):
             new_start = int(amount.text()) - int(end.text())
             start.setText(str(new_start))
 
-        if int(start.text()) < 0: # used to keep all 3 valus in range 0 - file_length
+        if int(start.text()) < 0:   # used to keep all 3 values in range 0 - file_length
             start.setText(str(0))
+        if start.text() != "" and end.text() != "" and int(end.text()) < int(start.text()):
+            end.setText(str(int(start.text()) + 1))
+        if int(start.text()) >= max_length:
+            start.setText(str(max_length - 1))
         if int(end.text()) > max_length:
-            end.setText(str(max_length))
+            if start.text() != "":
+                x = int(start.text())
+            else:
+                x = 0
+            end.setText(str(max_length - x))
         if int(amount.text()) > max_length:
             amount.setText(str(max_length))
 
