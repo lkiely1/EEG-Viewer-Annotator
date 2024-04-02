@@ -15,7 +15,7 @@ from edf_to_csv import edf_to_csv
 
 from plot_csv import plot
 
-dev_mode = 0 # 0 means load edf, 1 means load csv or convert
+dev_mode = 0    # 0 means load edf, 1 means load csv or convert
 
 
 class DatasetFilePicker(QWidget): # class used to prevent duplicate code
@@ -184,16 +184,20 @@ def time_calculation(start, end, amount, max_length, case): # maybe change so no
 
         if int(start.text()) < 0:   # used to keep all 3 values in range 0 - file_length
             start.setText(str(0))
+
         if start.text() != "" and end.text() != "" and int(end.text()) < int(start.text()):
             end.setText(str(int(start.text()) + 1))
+
         if int(start.text()) >= max_length:
             start.setText(str(max_length - 1))
-        if int(end.text()) > max_length:
+
+        if int(end.text()) > max_length: # helpful when user just wants to do from start to end w/o typing max length
             if start.text() != "":
                 x = int(start.text())
             else:
                 x = 0
             end.setText(str(max_length - x))
+
         if int(amount.text()) > max_length:
             amount.setText(str(max_length))
 
