@@ -27,6 +27,7 @@ def annotations_convertor(filepath):
             duration = 0
             for index, row in df.iterrows():
                 current = row[column]
+                # check if current == NaN, skip col and save time if yes
                 if current == 1.0 and last_1 != True:
                     start = int(index)
                     last_1 = True
@@ -43,5 +44,5 @@ def annotations_convertor(filepath):
         #next col
 
 
-annotations_convertor('C:/Users/R00212290/Desktop/Research Project/datasets/eeg/annotations_2017_A.csv')
+annotations_convertor('C:/Users/R00212290/Desktop/Research Project/datasets/eeg/annotations_2017_C.csv')
 

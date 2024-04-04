@@ -171,7 +171,7 @@ while mode == 0 or mode > 2:
 """
 
 
-def plot(csv_data, col_names, min_time, max_time):
+def plot(file_path, csv_data, col_names, min_time, max_time): # pass filepath into here
     fig, axs = plt.subplots(len(col_names), sharex=True, sharey=True)
 
     plt.rcParams['lines.linewidth'] = 0.3
@@ -217,18 +217,37 @@ def plot(csv_data, col_names, min_time, max_time):
                 elif annotate_type == "bar":
                     axs[i].add_patch(Rectangle((annotation_x, -400), annotation_x2, 75,
                                      facecolor=colors[annotation_num], fill=True))
-                    axs[i].annotate(label, ((annotation_x + (annotation_x2/2)), -300))
+                    axs[i].annotate(label, ((annotation_x + (annotation_x2/2)), -150))
 
         # axs.set(ylabel="Amplitude/Voltage (uV)") # not sure how to add back
 
-        with open('annotation_test_file.txt', 'r') as file:
-            for line in file:
-                print()
-                if line != "":
-                    annotation = line.strip('\n').split(',')
-                    # type, num, x, x2, y, label
-                    annotate(annotation[0], int(annotation[1]), int(annotation[2]), int(annotation[3]),
-                             int(annotation[4]), annotation[5])
+        test_annot = 0
+
+        if test_annot == 1:
+            with open('annotation_test_file.txt', 'r') as file:
+                for line in file:
+
+                    if line != "":
+                        annotation = line.strip('\n').split(',')
+                        # type, num, x, x2, y, label
+                        annotate(annotation[0], int(annotation[1]), int(annotation[2]), int(annotation[3]),
+                                 int(annotation[4]), annotation[5])
+        elif test_annot == 0:
+            file_name = os.path.basename(file_path)
+            expert = 'A' # possibly let user select expert (a, b or c)
+            txt_file = file_name.replace('.edf', '_' + expert + '.txt')
+            print(file_name)
+            print(txt_file)
+            path = f"{os.path.dirname(file_path)}/annotations/{txt_file}"
+            if os.path.isfile(path):
+                with open(path, 'r') as file:
+                    print("Test")
+                    for line in file:
+                        if line != "":
+                            annotation = line.strip('\n').split(',')
+                            # type, num, x, x2, y, label
+                            annotate("bar", int(annotation[0]), int(annotation[1]), int(annotation[2]),
+                                                                                       0, "test from csv annots")
 
     else: # if only 1 in plot
         print("only 1 channel in plot")
