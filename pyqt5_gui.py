@@ -68,6 +68,15 @@ def load_dataset():
         time_freq = raw.info['sfreq']
     elif dev_mode == 1: # load csv
         data = pd.read_csv(main_widget.dataset_file.get_file_path())
+        time_freq = 0
+        for index, row in data.iterrows():  # use to double check
+            if row['time'] != 1:
+                time_freq += 1
+            elif row['time'] == 1:
+                # print(row['time'])
+                break
+
+    print(f"time freq: {time_freq}")
 
     for i in reversed(range(plot_options_layout.count())): # prevent duplicates
         widget = plot_options_layout.itemAt(i).widget()
@@ -227,7 +236,8 @@ def plot_data(data, list_widget, start_time, end_time):
 
         print(f"TEST - start {start}, end {end}, {channels}")
 
-        fig, axs = plot(data, channels, start, end)
+        file_path = main_widget.dataset_file.get_file_path()
+        fig, axs = plot(file_path, data, channels, start, end)
 
         #plt.show() #for outside of window plot
 
@@ -272,7 +282,8 @@ class PlotGuiWidget(QWidget):
         plot_layout.addWidget(self.canvas)
 
     def create_plot(self, csv, channels, start, end):
-        fig, axs = plot(csv, channels, start, end)
+        file_path = main_widget.dataset_file.get_file_path()
+        fig, axs = plot(file_path, csv, channels, start, end)
         canvas = FigureCanvas(figure=fig)
         return canvas
 
