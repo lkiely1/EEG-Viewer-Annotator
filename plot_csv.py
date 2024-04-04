@@ -210,14 +210,14 @@ def plot(file_path, csv_data, col_names, min_time, max_time): # pass filepath in
                     axs[i].annotate(label, ((annotation_x + 1), 100))
 
                 elif annotate_type == "box":
-                    axs[i].add_patch(Rectangle((annotation_x, annotation_y), annotation_x2, 500,
+                    axs[i].add_patch(Rectangle((annotation_x, annotation_y), annotation_x2 - annotation_x, 500,
                                      edgecolor=colors[annotation_num], fill=False, linewidth=5))
                     axs[i].annotate(label, ((annotation_x + (annotation_x2/2)), annotation_y + 50))
 
                 elif annotate_type == "bar":
-                    axs[i].add_patch(Rectangle((annotation_x, -400), annotation_x2, 75,
+                    axs[i].add_patch(Rectangle((annotation_x, -200), annotation_x2 - annotation_x, 75,
                                      facecolor=colors[annotation_num], fill=True))
-                    axs[i].annotate(label, ((annotation_x + (annotation_x2/2)), -150))
+                    axs[i].annotate(label, ((annotation_x + ((annotation_x2 - annotation_x)/2)), -150))
 
         # axs.set(ylabel="Amplitude/Voltage (uV)") # not sure how to add back
 
