@@ -196,14 +196,14 @@ def plot(file_path, csv_data, col_names, min_time, max_time): # pass filepath in
     colors = ["red", "orange", "yellow", "green", "blue", "indigo", "violet", "magenta", "cyan", "black"]
 
     def annotate(annotate_type, annotation_num, annotation_x, annotation_x2, annotation_y, label):
-        for i in range(len(col_names)):
+        for i in range(len(col_names)+1):
             if annotation_num > 9:
                 annotation_num = 9 # black if too high
-
             if annotate_type == "bg":
                 # background colour
                 axs[i].axvspan(annotation_x, annotation_x2, color=colors[annotation_num], alpha=0.3)
-                axs[i].annotate(label, ((annotation_x + (((annotation_x2 - annotation_x)*-1)/2)), 100))
+                label_pos = annotation_x + (abs(annotation_x2 - annotation_x)/2)
+                label_y_pos = 100
 
             elif annotate_type == "arrow":
                 axs[i].annotate(label, xy=(annotation_x, annotation_y),
@@ -212,17 +212,23 @@ def plot(file_path, csv_data, col_names, min_time, max_time): # pass filepath in
 
             elif annotate_type == "line":
                 axs[i].axvline(x=annotation_x, color=colors[annotation_num], linestyle='--')
-                axs[i].annotate(label, ((annotation_x + 1), 100))
+                label_pos = annotation_x + 1
+                label_y_pos = 100
 
             elif annotate_type == "box":
                 axs[i].add_patch(Rectangle((annotation_x, annotation_y), annotation_x2 - annotation_x, 500,
                                  edgecolor=colors[annotation_num], fill=False, linewidth=5))
-                axs[i].annotate(label, ((annotation_x + (annotation_x2/2)), annotation_y + 50))
+                label_pos = annotation_x + (abs(annotation_x2 - annotation_x) / 2)
+                label_y_pos = annotation_y + 50
 
             elif annotate_type == "bar":
                 axs[i].add_patch(Rectangle((annotation_x, -200), annotation_x2 - annotation_x, 75,
                                  facecolor=colors[annotation_num], fill=True))
-                axs[i].annotate(label, ((annotation_x + ((annotation_x2 - annotation_x)/2)), -150))
+                label_pos = annotation_x + (abs(annotation_x2 - annotation_x) / 2)
+                label_y_pos = -150
+
+            if annotate_type != "arrow" and i != len(col_names):
+                axs[i].annotate(label, (label_pos, label_y_pos))
 
     # axs.set(ylabel="Amplitude/Voltage (uV)") # not sure how to add back
 
@@ -265,16 +271,17 @@ def plot(file_path, csv_data, col_names, min_time, max_time): # pass filepath in
     #    axs.set(xlabel="Time (S)")
     #    axs.set(ylabel="Amplitude/Voltage (uV)")
 
-    slider_ax = plt.axes([0.1, 0.05, 0.8, 0.03])
-    slider = Slider(slider_ax, "time", 0, (csv_data.time.max() - abs(min_time - max_time)), valinit=min_time)
+    #slider_ax = plt.axes([0.1, 0.05, 0.8, 0.03])
+    #slider = Slider(slider_ax, "time", 0, (csv_data.time.max() - abs(min_time - max_time)), valinit=min_time)
 
-    def update(val):
+    def on_click(event):
+        x = event.xdata
+        time_box.set_x(x)
         for i in range(len(col_names)):
-            axs[i].set_xlim(slider.val, slider.val + (abs(min_time - max_time)))
-            time_box.set_x(slider.val)
-        fig.canvas.draw_idle()
+            axs[i].set_xlim(x, x + (abs(min_time - max_time)))
+        fig.canvas.draw()
 
-    slider.on_changed(update)
+    fig.canvas.mpl_connect('button_press_event', on_click)
 
     plt.tight_layout()
 
