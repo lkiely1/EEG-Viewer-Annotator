@@ -12,6 +12,7 @@ import os.path
 from pathlib import Path
 
 from matplotlib.patches import Rectangle
+from matplotlib.widgets import Slider
 
 from edf_to_csv import edf_to_csv
 
@@ -172,92 +173,107 @@ while mode == 0 or mode > 2:
 
 
 def plot(file_path, csv_data, col_names, min_time, max_time): # pass filepath into here
-    fig, axs = plt.subplots(len(col_names), sharex=True, sharey=True)
+    fig, axs = plt.subplots(len(col_names)+1, sharey=True)
 
     plt.rcParams['lines.linewidth'] = 0.3
 
     fig.suptitle(f"EEG Graph for {col_names}")
 
-    if len(col_names) > 1:
+    for i in range(len(col_names)):
+        axs[i].plot(csv_data.time, csv_data[col_names[i]], 'tab:blue')
+        axs[i].set(ylabel=f"{col_names[i]}")
+        axs[i].set_xlim(min_time, max_time)  # need to get min max ylims
+
+    axs[len(col_names)-1].set(xlabel="Time (S)")
+
+
+    axs[len(col_names)].plot(csv_data.time, csv_data[col_names])
+    axs[len(col_names)].set_xlim(0, csv_data.time.max())
+
+    time_box = Rectangle((min_time, -300), abs(min_time - max_time), 500, edgecolor="grey",
+                         fill=False, linewidth=5)
+    axs[len(col_names)].add_patch(time_box)
+    colors = ["red", "orange", "yellow", "green", "blue", "indigo", "violet", "magenta", "cyan", "black"]
+
+    def annotate(annotate_type, annotation_num, annotation_x, annotation_x2, annotation_y, label):
         for i in range(len(col_names)):
-            axs[i].plot(csv_data.time, csv_data[col_names[i]], 'tab:blue')
-            axs[i].set(ylabel=f"{col_names[i]}")
+            if annotation_num > 9:
+                annotation_num = 9 # black if too high
 
-        for ax in axs.flat:
-            ax.set_xlim(min_time, max_time)  # need to get min max ylims
+            if annotate_type == "bg":
+                # background colour
+                axs[i].axvspan(annotation_x, annotation_x2, color=colors[annotation_num], alpha=0.3)
+                axs[i].annotate(label, ((annotation_x + (((annotation_x2 - annotation_x)*-1)/2)), 100))
 
-        axs[-1].set(xlabel="Time (S)")
+            elif annotate_type == "arrow":
+                axs[i].annotate(label, xy=(annotation_x, annotation_y),
+                                xytext=(annotation_x - 10, annotation_y + 10),
+                                arrowprops=dict(facecolor=colors[annotation_num], shrink=0.05))
 
-        colors = ["red", "orange", "yellow", "green", "blue", "indigo", "violet", "magenta", "cyan", "black"]
+            elif annotate_type == "line":
+                axs[i].axvline(x=annotation_x, color=colors[annotation_num], linestyle='--')
+                axs[i].annotate(label, ((annotation_x + 1), 100))
 
-        def annotate(annotate_type, annotation_num, annotation_x, annotation_x2, annotation_y, label):
-            for i in range(len(col_names)):
-                if annotation_num > 9:
-                    annotation_num = 9 # black if too high
+            elif annotate_type == "box":
+                axs[i].add_patch(Rectangle((annotation_x, annotation_y), annotation_x2 - annotation_x, 500,
+                                 edgecolor=colors[annotation_num], fill=False, linewidth=5))
+                axs[i].annotate(label, ((annotation_x + (annotation_x2/2)), annotation_y + 50))
 
-                if annotate_type == "bg":
-                    # background colour
-                    axs[i].axvspan(annotation_x, annotation_x2, color=colors[annotation_num], alpha=0.3)
-                    axs[i].annotate(label, ((annotation_x + (((annotation_x2 - annotation_x)*-1)/2)), 100))
+            elif annotate_type == "bar":
+                axs[i].add_patch(Rectangle((annotation_x, -200), annotation_x2 - annotation_x, 75,
+                                 facecolor=colors[annotation_num], fill=True))
+                axs[i].annotate(label, ((annotation_x + ((annotation_x2 - annotation_x)/2)), -150))
 
-                elif annotate_type == "arrow":
-                    axs[i].annotate(label, xy=(annotation_x, annotation_y),
-                                    xytext=(annotation_x - 10, annotation_y + 10),
-                                    arrowprops=dict(facecolor=colors[annotation_num], shrink=0.05))
+    # axs.set(ylabel="Amplitude/Voltage (uV)") # not sure how to add back
 
-                elif annotate_type == "line":
-                    axs[i].axvline(x=annotation_x, color=colors[annotation_num], linestyle='--')
-                    axs[i].annotate(label, ((annotation_x + 1), 100))
+    test_annot = 0
 
-                elif annotate_type == "box":
-                    axs[i].add_patch(Rectangle((annotation_x, annotation_y), annotation_x2 - annotation_x, 500,
-                                     edgecolor=colors[annotation_num], fill=False, linewidth=5))
-                    axs[i].annotate(label, ((annotation_x + (annotation_x2/2)), annotation_y + 50))
+    if test_annot == 1:
+        with open('annotation_test_file.txt', 'r') as file:
+            for line in file:
 
-                elif annotate_type == "bar":
-                    axs[i].add_patch(Rectangle((annotation_x, -200), annotation_x2 - annotation_x, 75,
-                                     facecolor=colors[annotation_num], fill=True))
-                    axs[i].annotate(label, ((annotation_x + ((annotation_x2 - annotation_x)/2)), -150))
-
-        # axs.set(ylabel="Amplitude/Voltage (uV)") # not sure how to add back
-
-        test_annot = 0
-
-        if test_annot == 1:
-            with open('annotation_test_file.txt', 'r') as file:
+                if line != "":
+                    annotation = line.strip('\n').split(',')
+                    # type, num, x, x2, y, label
+                    annotate(annotation[0], int(annotation[1]), int(annotation[2]), int(annotation[3]),
+                             int(annotation[4]), annotation[5])
+    elif test_annot == 0:
+        file_name = os.path.basename(file_path)
+        expert = 'A' # possibly let user select expert (a, b or c)
+        txt_file = file_name.replace('.edf', '_' + expert + '.txt')
+        print(file_name)
+        print(txt_file)
+        path = f"{os.path.dirname(file_path)}/annotations/{txt_file}"
+        if os.path.isfile(path):
+            with open(path, 'r') as file:
+                print("Test")
                 for line in file:
-
                     if line != "":
                         annotation = line.strip('\n').split(',')
                         # type, num, x, x2, y, label
-                        annotate(annotation[0], int(annotation[1]), int(annotation[2]), int(annotation[3]),
-                                 int(annotation[4]), annotation[5])
-        elif test_annot == 0:
-            file_name = os.path.basename(file_path)
-            expert = 'A' # possibly let user select expert (a, b or c)
-            txt_file = file_name.replace('.edf', '_' + expert + '.txt')
-            print(file_name)
-            print(txt_file)
-            path = f"{os.path.dirname(file_path)}/annotations/{txt_file}"
-            if os.path.isfile(path):
-                with open(path, 'r') as file:
-                    print("Test")
-                    for line in file:
-                        if line != "":
-                            annotation = line.strip('\n').split(',')
-                            # type, num, x, x2, y, label
-                            annotate("bar", int(annotation[0]), int(annotation[1]), int(annotation[2]),
-                                                                                       0, "test from csv annots")
+                        annotate("bar", int(annotation[0]), int(annotation[1]), int(annotation[2]),
+                                                                                   0, "test from csv annots")
 
-    else: # if only 1 in plot
-        print("only 1 channel in plot")
-        axs.plot(csv_data.time, csv_data[col_names[0]], 'tab:blue')
-        axs.set(ylabel=f"{col_names[0]}")
+    ##else: # if only 1 in plot
+    #    print("only 1 channel in plot")
+    #    axs.plot(csv_data.time, csv_data[col_names[0]], 'tab:blue')
+    #    axs.set(ylabel=f"{col_names[0]}")
 
-        axs.set_xlim(min_time, max_time)  # need to get min max ylims
+    #    axs.set_xlim(min_time, max_time)  # need to get min max ylims?
 
-        axs.set(xlabel="Time (S)")
-        axs.set(ylabel="Amplitude/Voltage (uV)")
+    #    axs.set(xlabel="Time (S)")
+    #    axs.set(ylabel="Amplitude/Voltage (uV)")
+
+    slider_ax = plt.axes([0.1, 0.05, 0.8, 0.03])
+    slider = Slider(slider_ax, "time", 0, (csv_data.time.max() - abs(min_time - max_time)), valinit=min_time)
+
+    def update(val):
+        for i in range(len(col_names)):
+            axs[i].set_xlim(slider.val, slider.val + (abs(min_time - max_time)))
+            time_box.set_x(slider.val)
+        fig.canvas.draw_idle()
+
+    slider.on_changed(update)
 
     plt.tight_layout()
 
