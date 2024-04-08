@@ -253,7 +253,8 @@ def plot(file_path, csv_data, col_names, min_time, max_time): # pass filepath in
                         # type, num, x, x2, y, label
                         annotate("bar", int(annotation[0]), int(annotation[1]), int(annotation[2]),
                                                                                    0, "test from csv annots")
-
+    else:
+        print("TEST, No annotations")
     ##else: # if only 1 in plot
     #    print("only 1 channel in plot")
     #    axs.plot(csv_data.time, csv_data[col_names[0]], 'tab:blue')
