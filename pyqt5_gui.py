@@ -241,28 +241,28 @@ def plot_data(data, list_widget, start_time, end_time):
 
         #plt.show() #for outside of window plot
 
+        for i in reversed(range(window_layout.count())):  # kind of works?
+            if window_layout.itemAt(i).widget() == plot_splitter:
+                for i in range(plot_splitter.count()):
+                    widget = plot_splitter.widget(i)
+                    if widget is not None:
+                        widget.setParent(None)
+                        widget.deleteLater() # only problem is main widget shouldnt be deleted
+                # delete all widgets from the splitter?
+
         plot_gui = PlotGuiWidget(data, channels, start, end)
 
-        plot_splitter = QSplitter(Qt.Horizontal) # if remove atm cant plot twice, (canvas disappears), on 3rd crash
+        #plot_splitter = QSplitter(Qt.Horizontal) # if remove atm cant plot twice, (canvas disappears), on 3rd crash
 
-        for i in reversed(range(window_layout.count())):  # kind of works?
-            splitter_exists = False
-            if window_layout.itemAt(i).widget() == plot_splitter:
-                #plot_splitter.deleteLater()
-                #plot_splitter = QSplitter(Qt.Horizontal)
-                splitter_exists = True
+        plot_splitter.addWidget(main_widget)
+        plot_splitter.addWidget(plot_gui)
+        plot_splitter.setStretchFactor(0, 500) # not sure how exactly works rn
+        plot_splitter.setStretchFactor(1, 100)
 
-            if not splitter_exists:
+        plot_splitter.setCollapsible(0, False)
+        plot_splitter.setCollapsible(1, False)
 
-                plot_splitter.addWidget(main_widget)
-                plot_splitter.addWidget(plot_gui) # dont do if exists? unsure how to check
-                plot_splitter.setStretchFactor(0, 500) # not sure how exactly works rn
-                plot_splitter.setStretchFactor(1, 100)
-
-                plot_splitter.setCollapsible(0, False)
-                plot_splitter.setCollapsible(1, False)
-
-                window_layout.addWidget(plot_splitter)
+        window_layout.addWidget(plot_splitter)
         plot_gui.show()
 
 
@@ -308,7 +308,7 @@ app = QApplication(sys.argv)
 window = QWidget()
 window_layout = QHBoxLayout()
 
-#plot_splitter = QSplitter(Qt.Horizontal)
+plot_splitter = QSplitter(Qt.Horizontal)
 
 main_layout = QVBoxLayout() # layout all other layouts are added to
 plot_options_layout = QGridLayout() # declared here to prevent duplicates

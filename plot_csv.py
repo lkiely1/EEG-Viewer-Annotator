@@ -274,12 +274,27 @@ def plot(file_path, csv_data, col_names, min_time, max_time): # pass filepath in
     #slider_ax = plt.axes([0.1, 0.05, 0.8, 0.03])
     #slider = Slider(slider_ax, "time", 0, (csv_data.time.max() - abs(min_time - max_time)), valinit=min_time)
 
+    press = None
     def on_click(event):
-        x = event.xdata
-        time_box.set_x(x)
-        for i in range(len(col_names)):
-            axs[i].set_xlim(x, x + (abs(min_time - max_time)))
-        fig.canvas.draw()
+        global press
+        press = True
+        fig.canvas.mpl_connect('motion_notify_event', on_motion)
+
+    def on_motion(event):
+        global press
+        if press == True:
+            x = event.xdata
+            time_box.set_x(x)
+            for i in range(len(col_names)):
+                axs[i].set_xlim(x, x + (abs(min_time - max_time)))
+            fig.canvas.draw()
+            fig.canvas.mpl_connect('button_release_event', on_release) # cant get to stop when release?
+
+    def on_release(event):
+        global press
+        press = False
+        fig.canvas.mpl_disconnect(on_click)
+        fig.canvas.mpl_disconnect(on_motion)
 
     fig.canvas.mpl_connect('button_press_event', on_click)
 
