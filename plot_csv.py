@@ -1,12 +1,14 @@
 import sys
-
+from memory_profiler import profile
 import numpy as np
 import pandas as pd
 
 import mne
+import gc
 
 import matplotlib
 import matplotlib.pyplot as plt
+matplotlib.use('qt5agg')
 
 import os.path
 from pathlib import Path
@@ -171,8 +173,8 @@ while mode == 0 or mode > 2:
         print("Please enter 1 or 2")
 """
 
-
-def plot(file_path, csv_data, col_names, min_time, max_time): # pass filepath into here
+@profile
+def plot(annotations_file_path, csv_data, col_names, min_time, max_time): # pass filepath into here
     fig, axs = plt.subplots(len(col_names)+1, sharey=True)
 
     plt.rcParams['lines.linewidth'] = 0.3
@@ -243,15 +245,14 @@ def plot(file_path, csv_data, col_names, min_time, max_time): # pass filepath in
                     # type, num, x, x2, y, label
                     annotate(annotation[0], int(annotation[1]), int(annotation[2]), int(annotation[3]),
                              int(annotation[4]), annotation[5])
-    elif test_annot == 0:
-        file_name = os.path.basename(file_path)
-        expert = 'A' # possibly let user select expert (a, b or c)
-        txt_file = file_name.replace('.edf', '_' + expert + '.txt')
-        print(file_name)
-        print(txt_file)
-        path = f"{os.path.dirname(file_path)}/annotations/{txt_file}"
-        if os.path.isfile(path):
-            with open(path, 'r') as file:
+    elif test_annot == 0: # want to change so user has to choose annotations NOT made w/ program!
+        #file_name = os.path.basename(annotations_file_path)
+        #expert = 'A' # possibly let user select expert (a, b or c)
+        #txt_file = file_name.replace('.edf', '_' + expert + '.txt')
+        #path = f"{os.path.dirname(annotations_file_path)}/annotations/{txt_file}" # change to just filepath from chosen annotations
+        print(f" 2 {annotations_file_path}")
+        if os.path.isfile(annotations_file_path):
+            with open(annotations_file_path, 'r') as file:
                 print("Test")
                 for line in file:
                     if line != "":
@@ -271,24 +272,22 @@ def plot(file_path, csv_data, col_names, min_time, max_time): # pass filepath in
     #    axs.set(xlabel="Time (S)")
     #    axs.set(ylabel="Amplitude/Voltage (uV)")
 
-    #slider_ax = plt.axes([0.1, 0.05, 0.8, 0.03])
-    #slider = Slider(slider_ax, "time", 0, (csv_data.time.max() - abs(min_time - max_time)), valinit=min_time)
-
     press = None
     def on_click(event):
         global press
-        press = True
-        fig.canvas.mpl_connect('motion_notify_event', on_motion)
+        if event.inaxes == time_box.axes:
+            press = True
+            fig.canvas.mpl_connect('motion_notify_event', on_motion)
 
     def on_motion(event):
         global press
-        if press == True:
+        if press == True and event.inaxes == time_box.axes:
             x = event.xdata
             time_box.set_x(x)
             for i in range(len(col_names)):
                 axs[i].set_xlim(x, x + (abs(min_time - max_time)))
             fig.canvas.draw()
-            fig.canvas.mpl_connect('button_release_event', on_release) # cant get to stop when release?
+            fig.canvas.mpl_connect('button_release_event', on_release)
 
     def on_release(event):
         global press
