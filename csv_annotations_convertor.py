@@ -6,7 +6,7 @@ import numpy as np
 
 import pandas as pd
 
-
+### used for csv annotations from this dataset:
 def annotations_convertor(filepath):
     print("test")
     # open csv file
