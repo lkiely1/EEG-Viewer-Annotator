@@ -18,163 +18,8 @@ from matplotlib.widgets import Slider
 
 from edf_to_csv import edf_to_csv
 
-#filename = 'chb01_01.edf'
-
-# check if csv file exists
-def file_check(filename):
-    if filename.endswith('.edf'):
-        filename = filename.replace('.edf', '')
-
-    csv_path = './' + filename + '.csv'
-    edf_path = './' + filename + '.edf'
-    txt_path = './' + filename + '_info.txt'
-
-    check_csv_file = os.path.isfile(csv_path)
-    check_edf_file = os.path.isfile(edf_path)
-    check_txt_file = os.path.isfile(txt_path)
-
-    if check_csv_file and check_txt_file:
-        print("CSV file already exists, opening")
-    elif check_edf_file:
-        print("CSV file doesn't exist for this EDF file, converting")
-        edf_to_csv(filename)
-    else:
-        print("EDF file doesn't exist. Closing")
-        sys.exit(0)
-
-
-
-
-
-def time_freq_check(filename):
-    if filename.endswith('.csv'):
-        filename = filename.replace('.csv', '')
-    csv_data = pd.read_csv(filename + '.csv')
-
-    txt_path = './' + filename + '_info.txt'
-    check_txt_file = os.path.isfile(txt_path)
-
-    # get time
-    # calculate time freq (e.g 256 lines in file2 and 3 is 1 sec)
-    # read time col, count num of rows til reach 1
-    time_freq_test = 0
-
-    if check_txt_file:
-        with open(filename + '_info.txt', 'r') as f:
-            time_freq_test = float(f.readline())
-        f.close()
-
-    time_freq = 0
-    for index, row in csv_data.iterrows():  # use to double check
-        if row['time'] != 1:
-            time_freq += 1
-        elif row['time'] == 1:
-            # print(row['time'])
-            break
-    # print(time_freq)
-
-    if float(time_freq_test) == time_freq:
-        print('same freq')
-    else:
-        print('error')
-
-
-def channel_select(csv_data, col_num, col_names):
-    col_names.append(csv_data.columns[col_num])
-    return col_names # for selected channels, loop through listbox selections with this to add them all?
-    # possibly use different approach?
-
-"""
-file_length = len(csv_data) / time_freq
-print(f"EEG file is {file_length} seconds long")
-
-time_amount = 0
-min_time = -1
-max_time = -1
-
-mode = 0
-"""
-
-
-def start_time(file_length, time_amount): # user input in terminal not used anymore
-    min_time = -1
-    while min_time < 0 or min_time > file_length:
-        try:
-            min_time = int(input(f"Select start time to plot: "))
-        except:
-            print('Please enter a number for start time.')
-            continue
-        if min_time < 0 or min_time > file_length:
-            print(f"Invalid input. Pick number between range {0} and {file_length}")
-    return min_time
-
-
-def end_time(file_length, min_time): # user input in terminal not used anymore
-    max_time = -1
-    while max_time <= 0 or max_time > file_length or max_time < min_time:
-        try:
-            max_time = int(input(f"Select end time to plot: "))
-        except:
-            print('Please enter a number for end time.')
-            continue
-        if max_time <= 0 or max_time > file_length or max_time < min_time:
-            print(f"Invalid input. Pick number between range {min_time} and {file_length} ")
-    return max_time
-
-
-""" unused, was for when you would put plot details in run terminal
-# want to clean up to remove repeat functions
-print("Select mode")
-print("1 - Set amount of time")
-print("2 - Set min and max time")
-while mode == 0 or mode > 2:
-    try:
-        mode = int(input("-> "))
-    except:
-        print('Please enter 1 or 2.')
-        continue
-
-    if mode == 1:
-        while time_amount <= 0 or time_amount > file_length:
-            try:
-                time_amount = int(input(f"Select amount of time to plot : "))
-            except:
-                print('Please enter a number of time.')
-                continue
-            if time_amount <= 0 or time_amount > file_length:
-                print(f"Invalid input. Pick number less than or equal to {file_length}")
-            elif time_amount == file_length:
-                print("Plotting full data")
-                min_time = 0
-                max_time = file_length
-            else:
-                min_or_max = 0
-                while min_or_max == 0 or min_or_max > 2:
-                    print(f"Set 1: start time (min possible 0) or 2: end time (max possible {file_length})")
-                    try:
-                        min_or_max = int(input("-> "))
-                    except:
-                        print('Invalid input. Please enter 1 or 2.')
-                        continue
-                    if min_or_max == 0 or min_or_max > 2:
-                        print("Please enter 1 or 2")
-                    elif min_or_max == 1:
-                        min_time = start_time(file_length, time_amount)
-                        max_time = min_time + time_amount
-                    elif min_or_max == 2:
-                        min_time = time_amount
-                        max_time = end_time(file_length, min_time)
-                        min_time = max_time - time_amount
-
-    elif mode == 2:
-        min_time = start_time(file_length, time_amount)
-        max_time = end_time(file_length, min_time)
-    else:
-        print("Please enter 1 or 2")
-"""
-
 @profile
-def plot(annotations_file_path, csv_data, col_names, min_time, max_time): # pass filepath into here
+def plot(annotations_file_path, md5, csv_data, col_names, min_time, max_time): # pass filepath into here
     fig, axs = plt.subplots(len(col_names)+1, sharey=True)
 
     plt.rcParams['lines.linewidth'] = 0.3
@@ -195,6 +40,7 @@ def plot(annotations_file_path, csv_data, col_names, min_time, max_time): # pass
     time_box = Rectangle((min_time, -300), abs(min_time - max_time), 500, edgecolor="grey",
                          fill=False, linewidth=5)
     axs[len(col_names)].add_patch(time_box)
+    # 1 – Clean EEG, 2 – Device Interference, 3 – EMG, 4 – Movement, 5 – Electrode, 6 – HF ventilation, 7 – Biological Rhythm
     colors = ["red", "orange", "yellow", "green", "blue", "indigo", "violet", "magenta", "cyan", "black"]
 
     def annotate(annotate_type, annotation_num, annotation_x, annotation_x2, annotation_y, label):
@@ -250,7 +96,7 @@ def plot(annotations_file_path, csv_data, col_names, min_time, max_time): # pass
         #expert = 'A' # possibly let user select expert (a, b or c)
         #txt_file = file_name.replace('.edf', '_' + expert + '.txt')
         #path = f"{os.path.dirname(annotations_file_path)}/annotations/{txt_file}" # change to just filepath from chosen annotations
-        print(f" 2 {annotations_file_path}")
+        print(f" 1 {annotations_file_path}")
         if os.path.isfile(annotations_file_path):
             with open(annotations_file_path, 'r') as file:
                 print("Test")
@@ -260,6 +106,15 @@ def plot(annotations_file_path, csv_data, col_names, min_time, max_time): # pass
                         # type, num, x, x2, y, label
                         annotate("bar", int(annotation[0]), int(annotation[1]), int(annotation[2]),
                                                                                    0, "test from csv annots")
+    if os.path.isfile(md5 + "_annotations.txt"):
+        with open(md5 + "_annotations.txt", 'r') as file2:
+            print("Test md5")
+            for line in file2:
+                if line != "":
+                    annotation = line.strip('\n').split(',')
+                    # type, num, x, x2, y, label
+                    annotate("bar", int(annotation[0]), float(annotation[1]), float(annotation[2]),
+                             0, "user created annot")
     else:
         print("TEST, No annotations")
     ##else: # if only 1 in plot
@@ -273,27 +128,89 @@ def plot(annotations_file_path, csv_data, col_names, min_time, max_time): # pass
     #    axs.set(ylabel="Amplitude/Voltage (uV)")
 
     press = None
+    annot_box = None
+    init_x = None
+    x2 = None
+    annotation_num = None
+
     def on_click(event):
         global press
-        if event.inaxes == time_box.axes:
+        global annot_box
+        global init_x
+
+        state = fig.canvas.toolbar.mode
+        if event.inaxes == time_box.axes and state == "":
             press = True
+            fig.canvas.mpl_connect('motion_notify_event', on_motion)
+        elif event.inaxes != axs[-1] and state == "":
+            press = True
+            # create rectangle at x pos
+            init_x = event.xdata
+            annot_box = Rectangle((init_x, -200), width=0.1, height=75) # could change to bar values
+            event.inaxes.add_patch(annot_box)
+            fig.canvas.draw()
             fig.canvas.mpl_connect('motion_notify_event', on_motion)
 
     def on_motion(event):
         global press
-        if press == True and event.inaxes == time_box.axes:
+        state = fig.canvas.toolbar.mode
+        if press == True and event.inaxes == time_box.axes and state == "":
             x = event.xdata
             time_box.set_x(x)
             for i in range(len(col_names)):
                 axs[i].set_xlim(x, x + (abs(min_time - max_time)))
             fig.canvas.draw()
             fig.canvas.mpl_connect('button_release_event', on_release)
+        elif press == True and event.inaxes != axs[-1] and state == "":
+            global annot_box
+            global init_x
+            global x2
+            print("t")
+            x2 = event.xdata
+            width = x2 - annot_box.get_x()
+            annot_box.set_width(width)
+            fig.canvas.draw()
+            fig.canvas.mpl_connect('button_release_event', on_release)
+            # move rectangle
+            # check incase user draws backwards (lowest x is start)
 
     def on_release(event):
         global press
+        global annot_box
+        global init_x
+        global x2
+        global annotation_num
         press = False
+        if event.inaxes != axs[-1]:
+            print("t")
+            global init_x
+            global x2
+            global annotation_num
+            if init_x > x2:
+                start = x2
+                end = init_x
+                annot_len = abs(start - end)
+            else:
+                start = init_x
+                end = x2
+                annot_len = abs(start - end)
+            for i in range(len(col_names)):
+                axs[i].add_patch(Rectangle((start, -200), width=annot_len, height=75, facecolor='red', fill=True))
+            fig.canvas.draw()
+            # save to file
+            filename = md5 # get md5 hash of eeg and use that for filenames?
+            #if annotation_num is None:
+            #    annotation_num = 0
+            with open(filename + '_annotations.txt', 'a') as f:
+                f.write(f'2,{start},{end}')
+                f.write('\n')
+
+            #annotation_num += 1
+
+        # new window for data to edit
         fig.canvas.mpl_disconnect(on_click)
         fig.canvas.mpl_disconnect(on_motion)
+
 
     fig.canvas.mpl_connect('button_press_event', on_click)
 

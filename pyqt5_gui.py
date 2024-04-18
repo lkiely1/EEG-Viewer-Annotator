@@ -1,8 +1,10 @@
 import gc
+import os
 import sys
 from memory_profiler import profile
 import matplotlib
 import mne
+import hashlib
 import numpy as np
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIntValidator
@@ -134,12 +136,22 @@ class PlotGuiWidget(QWidget):
         plot_layout.addWidget(self.canvas)
 
     @profile
-    def create_plot(self, csv, channels, start, end):
+    def create_plot(self, dataframe, channels, start, end):
         annotations_file_path = main_widget.annot_win.annot_file.get_file_path()
         print(annotations_file_path)
-        fig, axs = plot(annotations_file_path, csv, channels, start, end)
+        global edfmd5
+        fig, axs = plot(annotations_file_path, edfmd5, dataframe, channels, start, end)
         canvas = FigureCanvas(figure=fig)
         return canvas
+
+
+def getmd5(edf):
+    md5 = hashlib.md5()
+    f = open(edf, "rb")
+    while chunk := f.read(4096):
+        md5.update(chunk)
+
+    return md5.hexdigest()
 
 
 class MainGuiWidget(QWidget):
@@ -160,6 +172,7 @@ class MainGuiWidget(QWidget):
 
     def load_dataset(self):
         print("TEST")
+        global edfmd5
         if dev_mode == 0:  # load edf
             raw = mne.io.read_raw_edf(main_widget.dataset_file.get_file_path())
             data = raw.to_data_frame()
@@ -283,8 +296,7 @@ class MainGuiWidget(QWidget):
     def deselect_all(self, col_list):
         col_list.clearSelection()
 
-    def time_calculation(self, start, end, amount, max_length,
-                         case):  # maybe change so not predefined? not sure if would work
+    def time_calculation(self, start, end, amount, max_length, case):
         print(f"{str(start.text())}, {str(end.text())}, {str(amount.text())}, {max_length}, {case}")  # for testing
         try:  # currently if user tries to clear entry later, runs function twice to get val again. not sure how to stop
             # also must be why cant change amount value
@@ -325,18 +337,67 @@ class MainGuiWidget(QWidget):
 class AnnotationLoadWidget(QWidget):
     def __init__(self):
         super().__init__()
+        global edfmd5
         annotations_layout = QVBoxLayout()
-        self.label = QLabel("ANNOTATIONS")
+        self.label = QLabel("ANNOTATIONS MUST BE IN A TXT IN FORMAT (annotnum, start, end)")
+        color_label = QLabel("Types: 1 – Clean EEG, 2 – Device Interference, 3 – EMG, 4 – Movement, 5 – Electrode, 6 – HF ventilation, 7 – Biological Rhythm")
         annotations_layout.addWidget(self.label)
+        annotations_layout.addWidget(color_label)
+
+        user_annots = QTableWidget()
+        user_annots.setColumnCount(3)
+        user_annots.setRowCount(99) # TEMP, need to get num of lines before adding anything
+
+        self.loaded_annots = QTableWidget()
+        self.loaded_annots.setColumnCount(3)
+        self.loaded_annots.setRowCount(99)  # TEMP, need to get num of lines before adding anything
+
+        edfmd5 = getmd5(main_widget.dataset_file.get_file_path()) # testing if parts work if this is here
+        print(edfmd5)
+
+        if os.path.isfile(edfmd5 + "_annotations.txt"):
+            with open(edfmd5 + "_annotations.txt", 'r') as file:
+                line_num = 1
+                user_annots.setItem(0, 0, QTableWidgetItem("Annot Type"))
+                user_annots.setItem(0, 1, QTableWidgetItem("Start Time"))
+                user_annots.setItem(0, 2, QTableWidgetItem("End Time"))
+                for line in file:
+                    if line != "":
+                        annotation = line.strip('\n').split(',')
+                        user_annots.setItem(line_num, 0, QTableWidgetItem(annotation[0]))
+                        user_annots.setItem(line_num, 1, QTableWidgetItem(annotation[1]))
+                        user_annots.setItem(line_num, 2, QTableWidgetItem(annotation[2]))
+                        line_num += 1
+
+        self.user_label = QLabel("Annotations created in program")
+        annotations_layout.addWidget(self.user_label)
+        annotations_layout.addWidget(user_annots)
 
         self.annot_file = DatasetFilePicker("Select TXT file to load", load_annots, "Load")
         annotations_layout.addWidget(self.annot_file)
+        annotations_layout.addWidget(self.loaded_annots)
         self.setLayout(annotations_layout)
 
 
 def load_annots():
-    print("change this later")
+    loaded_annots = main_widget.annot_win.loaded_annots
+    if os.path.isfile(main_widget.annot_win.annot_file.get_file_path()):
+        with open(main_widget.annot_win.annot_file.get_file_path(), 'r') as file:
+            line_num = 1
+            loaded_annots.setItem(0, 0, QTableWidgetItem("Annot Type"))
+            loaded_annots.setItem(0, 1, QTableWidgetItem("Start Time"))
+            loaded_annots.setItem(0, 2, QTableWidgetItem("End Time"))
+            for line in file:
+                if line != "":
+                    annotation = line.strip('\n').split(',')
+                    loaded_annots.setItem(line_num, 0, QTableWidgetItem(annotation[0]))
+                    loaded_annots.setItem(line_num, 1, QTableWidgetItem(annotation[1]))
+                    loaded_annots.setItem(line_num, 2, QTableWidgetItem(annotation[2]))
+                    line_num += 1
 
+
+
+edfmd5 = None
 app = QApplication(sys.argv)
 window = QWidget()
 window_layout = QHBoxLayout()
