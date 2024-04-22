@@ -15,6 +15,7 @@ from matplotlib import pyplot as plt
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
+
 matplotlib.use('qt5agg')
 
 from edf_to_csv import edf_to_csv
@@ -140,7 +141,7 @@ class PlotGuiWidget(QWidget):
         annotations_file_path = main_widget.annot_win.annot_file.get_file_path()
         print(annotations_file_path)
         global edfmd5
-        fig, axs = plot(annotations_file_path, edfmd5, dataframe, channels, start, end)
+        fig, axs = plot(annotations_file_path, edfmd5, dataframe, channels, start, end, app) # pass app to prevent crash
         canvas = FigureCanvas(figure=fig)
         return canvas
 
@@ -340,7 +341,10 @@ class AnnotationLoadWidget(QWidget):
         global edfmd5
         annotations_layout = QVBoxLayout()
         self.label = QLabel("ANNOTATIONS MUST BE IN A TXT IN FORMAT (annotnum, start, end)")
-        color_label = QLabel("Types: 1 – Clean EEG, 2 – Device Interference, 3 – EMG, 4 – Movement, 5 – Electrode, 6 – HF ventilation, 7 – Biological Rhythm")
+        color_label = QLabel("Types: 1 – Clean EEG, 2 – Device Interference, 3 – EMG, 4 – Movement, 5 – Electrode, 6 – HF ventilation, 7 – Biological Rhythm, 8 - Seizure")
+        labels = ["Clean EEG", "Device Interference", "EMG", "Movement", "Electrode", "HF ventilation", "Biological Rhythm", "Seizure", "?", "??", "???"]
+        colors = ["red", "orange", "yellow", "green", "blue", "indigo", "violet", "magenta", "cyan", "black"]
+
         annotations_layout.addWidget(self.label)
         annotations_layout.addWidget(color_label)
 
@@ -364,7 +368,7 @@ class AnnotationLoadWidget(QWidget):
                 for line in file:
                     if line != "":
                         annotation = line.strip('\n').split(',')
-                        user_annots.setItem(line_num, 0, QTableWidgetItem(annotation[0]))
+                        user_annots.setItem(line_num, 0, QTableWidgetItem(labels[int(annotation[0])]))
                         user_annots.setItem(line_num, 1, QTableWidgetItem(annotation[1]))
                         user_annots.setItem(line_num, 2, QTableWidgetItem(annotation[2]))
                         line_num += 1
@@ -380,6 +384,8 @@ class AnnotationLoadWidget(QWidget):
 
 
 def load_annots():
+    labels = ["Clean EEG", "Device Interference", "EMG", "Movement", "Electrode", "HF ventilation", "Biological Rhythm",
+              "Seizure", "?", "??", "???"]
     loaded_annots = main_widget.annot_win.loaded_annots
     if os.path.isfile(main_widget.annot_win.annot_file.get_file_path()):
         with open(main_widget.annot_win.annot_file.get_file_path(), 'r') as file:
@@ -390,14 +396,32 @@ def load_annots():
             for line in file:
                 if line != "":
                     annotation = line.strip('\n').split(',')
-                    loaded_annots.setItem(line_num, 0, QTableWidgetItem(annotation[0]))
+                    loaded_annots.setItem(line_num, 0, QTableWidgetItem(labels[int(annotation[0])]))
                     loaded_annots.setItem(line_num, 1, QTableWidgetItem(annotation[1]))
                     loaded_annots.setItem(line_num, 2, QTableWidgetItem(annotation[2]))
                     line_num += 1
 
 
+class CreateAnnotation(QWidget):
+    def __init__(self):
+        super().__init__()
+        annotation_layout = QVBoxLayout()
+        color_label = QLabel("Types: 1 – Clean EEG, 2 – Device Interference, 3 – EMG, 4 – Movement, 5 – Electrode, 6 – HF ventilation, 7 – Biological Rhythm")
+        annotation_layout.addWidget(color_label)
+
+        start_time = QLineEdit()
+        start_time.setPlaceholderText("Start")
+
+        end_time = QLineEdit()
+        end_time.setPlaceholderText("End")
+
+        annotation_layout.addWidget(start_time)
+        annotation_layout.addWidget(end_time)
+
+        self.setLayout(annotation_layout)
 
 edfmd5 = None
+
 app = QApplication(sys.argv)
 window = QWidget()
 window_layout = QHBoxLayout()
