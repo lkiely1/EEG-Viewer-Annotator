@@ -1,3 +1,4 @@
+import math
 import os
 import sys
 
@@ -6,7 +7,7 @@ import numpy as np
 
 import pandas as pd
 
-### used for csv annotations from this dataset:
+# used for csv annotations from this dataset: https://zenodo.org/records/4940267
 def annotations_convertor(filepath):
     print("test")
     # open csv file
@@ -21,9 +22,9 @@ def annotations_convertor(filepath):
 
     for column in df.columns:
         with open(f"{os.path.dirname(filepath)}/annotations/eeg{column}_{filename_details[2]}.txt", 'w') as file:
-            print(f"column: {column}")
-            annotation_num = 1
-            last_1 = False
+            #print(f"column: {column}")
+            annotation_num = 7 # Seizure
+            last_1 = None
             duration = 0
             for index, row in df.iterrows():
                 current = row[column]
@@ -38,11 +39,15 @@ def annotations_convertor(filepath):
                     end = start + duration
                     file.write(f'{annotation_num},{start},{end}')
                     file.write('\n')
-                    annotation_num += 1
                     start = 0
                     duration = 0
+                elif math.isnan(current):
+                    ##print("file finished")
+                    break
         #next col
 
 
+annotations_convertor('C:/Users/R00212290/Desktop/Research Project/datasets/eeg/annotations_2017_A.csv')
+annotations_convertor('C:/Users/R00212290/Desktop/Research Project/datasets/eeg/annotations_2017_B.csv')
 annotations_convertor('C:/Users/R00212290/Desktop/Research Project/datasets/eeg/annotations_2017_C.csv')
 
