@@ -1,5 +1,6 @@
 import sys
 
+from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIntValidator, QDoubleValidator
 from PyQt5.QtWidgets import *
@@ -29,23 +30,35 @@ new_end = None
 
 
 class CreateAnnotation(QWidget):
-    def __init__(self, start, end, fig, axs, col_names, md5, annot_len):
+    def __init__(self, start, end, fig, axs, col_names, user_annot_file, annot_len):
         super().__init__()
         annotation_layout = QVBoxLayout()
-        color_label = QLabel("Types: 1 – Clean EEG, 2 – Device Interference, 3 – EMG, 4 – Movement, 5 – Electrode, 6 – HF ventilation, 7 – Biological Rhythm")
-        annotation_layout.addWidget(color_label)
+        labels = ["Clean EEG", "Device Interference", "EMG", "Movement", "Electrode", "HF ventilation",
+                  "Biological Rhythm", "Seizure", "?", "??", "???"]
+        colors = ["red", "orange", "yellow", "green", "blue", "indigo", "violet", "magenta", "cyan", "black"]
 
-        validator = QIntValidator(0, 100000) # get max len
+        label = QLabel("Annotation Type")
+        annotation_layout.addWidget(label)
+        list_widget = QListWidget()
+
+        list_widget.clear()  # not sure if still need this
+
+        list_widget.addItems(labels)
+        list_widget.setCurrentRow(0) # default of clean eeg
+        annotation_layout.addWidget(list_widget)
+
+        start_validator = QIntValidator(0, end)
+        end_validator = QIntValidator(start, 10000000)  # get max len
+        # change when start/end changed?
 
         start_time = QLineEdit()
-        start_time.setValidator(validator)
+        start_time.setValidator(start_validator)
         start_time.setPlaceholderText("Start")
 
         end_time = QLineEdit()
-        end_time.setValidator(validator)
+        end_time.setValidator(end_validator)
         end_time.setPlaceholderText("End")
 
-        # radio group for types, pass into save
 
         start_time.setText(str(start))
         end_time.setText(str(end))
@@ -53,8 +66,9 @@ class CreateAnnotation(QWidget):
         annotation_layout.addWidget(start_time)
         annotation_layout.addWidget(end_time)
 
+
         save_button = QPushButton("Save")
-        save_button.clicked.connect(lambda: self.save_annot(start_time, end_time, fig, axs, col_names, md5, annot_len))
+        save_button.clicked.connect(lambda: self.save_annot(start_time, end_time, fig, axs, col_names, user_annot_file, annot_len, list_widget.currentRow()))
 
         cancel_button = QPushButton("Cancel")
         cancel_button.clicked.connect(self.cancel)
@@ -64,20 +78,30 @@ class CreateAnnotation(QWidget):
 
         self.setLayout(annotation_layout)
 
-    def save_annot(self, start, end, fig, axs, col_names, md5, annot_len):
+
+
+
+    def save_annot(self, start, end, fig, axs, col_names, user_annot_file, annot_len, annot_num):
         new_start = int(start.text())
         new_end = int(end.text())
         new_annot_len = abs(new_end - new_start)
 
+        labels = ["Clean EEG", "Device Interference", "EMG", "Movement", "Electrode", "HF ventilation",
+                  "Biological Rhythm", "Seizure", "?", "??", "???"]
+        colors = ["red", "orange", "yellow", "green", "blue", "indigo", "violet", "magenta", "cyan", "black"]
+
         print("SAVE = TRUE")
         print(f"new start: {new_start}, new end: {new_end}")
         for i in range(len(col_names)+1):
-            axs[i].add_patch(Rectangle((new_start, -200), width=new_annot_len, height=75, facecolor='red', fill=True))
+            axs[i].add_patch(Rectangle((new_start, -200), width=new_annot_len, height=75, facecolor=colors[annot_num], fill=True))
+            if i != len(col_names) + 1:
+                label_pos = new_start
+                label_y_pos = -200  # drawn on bar
+                axs[i].annotate(labels[annot_num], (label_pos, label_y_pos))
         fig.canvas.draw()
         # save to file
-        filename = md5  # get md5 hash of eeg and use that for filenames?
-        with open(filename + '_annotations.txt', 'a') as f:
-            f.write(f'2,{new_start},{new_end}')
+        with open(user_annot_file, 'a') as f:
+            f.write(f'{annot_num},{new_start},{new_end}')
             f.write('\n')
 
         self.close()
@@ -86,15 +110,15 @@ class CreateAnnotation(QWidget):
         self.close()
 
 
-def save_annotation(start, end, app, fig, axs, col_names, md5, annot_len):
+def save_annotation(start, end, app, fig, axs, col_names, user_annot_file, annot_len):
     start = round(start)
     end = round(end)
-    window = CreateAnnotation(start, end, fig, axs, col_names, md5, annot_len)
+    window = CreateAnnotation(start, end, fig, axs, col_names, user_annot_file, annot_len)
     window.show()
 
 
 @profile
-def plot(annotations_file_path, md5, csv_data, col_names, min_time, max_time, app):  # pass filepath into here
+def plot(annotations_file_path, user_annot_file, eeg_data, col_names, min_time, max_time, app):  # pass filepath into here
     fig, axs = plt.subplots(len(col_names) + 1, sharey=True)
 
     plt.rcParams['lines.linewidth'] = 0.3
@@ -102,14 +126,14 @@ def plot(annotations_file_path, md5, csv_data, col_names, min_time, max_time, ap
     fig.suptitle(f"EEG Graph for {col_names}")
 
     for i in range(len(col_names)):
-        axs[i].plot(csv_data.time, csv_data[col_names[i]], 'tab:blue')
+        axs[i].plot(eeg_data.time, eeg_data[col_names[i]], 'tab:blue')
         axs[i].set(ylabel=f"{col_names[i]}")
         axs[i].set_xlim(min_time, max_time)  # need to get min max ylims
 
     axs[len(col_names) - 1].set(xlabel="Time (S)")
 
-    axs[len(col_names)].plot(csv_data.time, csv_data[col_names])
-    axs[len(col_names)].set_xlim(0, csv_data.time.max())
+    axs[len(col_names)].plot(eeg_data.time, eeg_data[col_names])
+    axs[len(col_names)].set_xlim(0, eeg_data.time.max())
 
     time_box = Rectangle((min_time, -300), abs(min_time - max_time), 500, edgecolor="grey",
                          fill=False, linewidth=5)
@@ -171,7 +195,7 @@ def plot(annotations_file_path, md5, csv_data, col_names, min_time, max_time, ap
         # expert = 'A' # possibly let user select expert (a, b or c)
         # txt_file = file_name.replace('.edf', '_' + expert + '.txt')
         # path = f"{os.path.dirname(annotations_file_path)}/annotations/{txt_file}" # change to just filepath from chosen annotations
-        print(f" 1 {annotations_file_path}")
+        print(f" 1 {annotations_file_path}") #test
         if os.path.isfile(annotations_file_path):
             with open(annotations_file_path, 'r') as file:
                 print("Test")
@@ -181,9 +205,9 @@ def plot(annotations_file_path, md5, csv_data, col_names, min_time, max_time, ap
                         # type, num, x, x2, y, label
                         annotate("bar", int(annotation[0]), int(annotation[1]), int(annotation[2]),
                                  0, labels[int(annotation[0])])
-    if os.path.isfile(md5 + "_annotations.txt"):
-        with open(md5 + "_annotations.txt", 'r') as file2:
-            print("Test md5")
+    if os.path.isfile(user_annot_file):
+        with open(user_annot_file, 'r') as file2:
+            print("Test user_annot_file")
             for line in file2:
                 if line != "":
                     annotation = line.strip('\n').split(',')
@@ -194,7 +218,7 @@ def plot(annotations_file_path, md5, csv_data, col_names, min_time, max_time, ap
         print("TEST, No annotations")
     ##else: # if only 1 in plot
     #    print("only 1 channel in plot")
-    #    axs.plot(csv_data.time, csv_data[col_names[0]], 'tab:blue')
+    #    axs.plot(eeg_data.time, eeg_data[col_names[0]], 'tab:blue')
     #    axs.set(ylabel=f"{col_names[0]}")
 
     #    axs.set_xlim(min_time, max_time)  # need to get min max ylims?
@@ -221,7 +245,7 @@ def plot(annotations_file_path, md5, csv_data, col_names, min_time, max_time, ap
             press = True
             # create rectangle at x pos
             init_x = event.xdata
-            annot_box = Rectangle((init_x, -200), width=0.1, height=75)  # could change to bar values
+            annot_box = Rectangle((init_x, -200), width=0.1, height=500, fill=False)  # could change to bar values
             event.inaxes.add_patch(annot_box)
             fig.canvas.draw()
             fig.canvas.mpl_connect('motion_notify_event', on_motion)
@@ -257,6 +281,7 @@ def plot(annotations_file_path, md5, csv_data, col_names, min_time, max_time, ap
         global annotation_num
         press = False
         annot_box.remove()
+        fig.canvas.draw()
         if event.inaxes != axs[-1]:
             print("t")
             global init_x
@@ -274,7 +299,7 @@ def plot(annotations_file_path, md5, csv_data, col_names, min_time, max_time, ap
             #    annotation_num = 0
 
             print(f"old start: {start}, old end: {end}")
-            save_annotation(start, end, app, fig, axs, col_names, md5, annot_len)
+            save_annotation(start, end, app, fig, axs, col_names, user_annot_file, annot_len)
 
         fig.canvas.mpl_disconnect(on_click)
         fig.canvas.mpl_disconnect(on_motion)

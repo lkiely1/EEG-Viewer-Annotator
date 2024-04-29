@@ -1,4 +1,5 @@
 import gc
+import json
 import os
 import sys
 from memory_profiler import profile
@@ -25,7 +26,7 @@ from plot_csv import plot
 dev_mode = 0    # 0 means load edf, 1 means load csv or convert
 
 
-class DatasetFilePicker(QWidget): # class used to prevent duplicate code
+class FilePicker(QWidget): # class used to prevent duplicate code
     def __init__(self, title, file_load, button_text):
         super().__init__()
         self.title = title # text at top of window when selecting file
@@ -48,7 +49,10 @@ class DatasetFilePicker(QWidget): # class used to prevent duplicate code
         main_layout.addLayout(self.layout)
 
     def browse_file(self):
-        file_path, _ = QFileDialog.getOpenFileName(self, self.title, "", "All Files (*)")
+        if self.title != "Select Directory":
+            file_path, _ = QFileDialog.getOpenFileName(self, self.title, "", "All Files (*)")
+        else:
+            file_path = QFileDialog.getExistingDirectory(self, self.title, "")
         # may change "all files" for edf or csv only (if figure out how to do either), may need "file_type" variable
         if file_path:
             self.file_path.setText(file_path)
@@ -129,7 +133,7 @@ class PlotGuiWidget(QWidget):
 
         self.canvas = self.create_plot(csv, channels, start, end)
 
-        self.canvas.setMinimumWidth(450)    # i think this is an ok fix? will ask if it shouldn't be hard coded like this
+        self.canvas.setMinimumWidth(600)    # i think this is an ok fix? will ask if it shouldn't be hard coded like this
 
         toolbar = NavigationToolbar(self.canvas, self)
         plot_layout.addWidget(toolbar)
@@ -141,7 +145,10 @@ class PlotGuiWidget(QWidget):
         annotations_file_path = main_widget.annot_win.annot_file.get_file_path()
         print(annotations_file_path)
         global edfmd5
-        fig, axs = plot(annotations_file_path, edfmd5, dataframe, channels, start, end, app) # pass app to prevent crash
+        global jsonpath
+        user_annot_file = jsonpath + edfmd5 + "_annotations.txt"
+        print(user_annot_file)
+        fig, axs = plot(annotations_file_path, user_annot_file, dataframe, channels, start, end, app) # pass app to prevent crash
         canvas = FigureCanvas(figure=fig)
         return canvas
 
@@ -164,19 +171,22 @@ class MainGuiWidget(QWidget):
         load_title = "Select EDF file to load"
 
         if dev_mode == 1:
-            self.edf_file = DatasetFilePicker("Select EDF file to convert to CSV", convert, "Convert")
+            self.edf_file = FilePicker("Select EDF file to convert to CSV", convert, "Convert")
             main_layout.addWidget(self.edf_file)
             load_title = "Select CSV file to load"
 
-        self.dataset_file = DatasetFilePicker(load_title, self.load_dataset, "Load")
+        self.dataset_file = FilePicker(load_title, self.load_dataset, "Load")
         main_layout.addWidget(self.dataset_file)
 
     def load_dataset(self):
         print("TEST")
         global edfmd5
+        bipolar = False
         if dev_mode == 0:  # load edf
             raw = mne.io.read_raw_edf(main_widget.dataset_file.get_file_path())
             data = raw.to_data_frame()
+            #if bipolar == True:
+            #    new_data =
             time_freq = raw.info['sfreq']
         elif dev_mode == 1:  # load csv
             data = pd.read_csv(main_widget.dataset_file.get_file_path())
@@ -339,18 +349,21 @@ class AnnotationLoadWidget(QWidget):
     def __init__(self):
         super().__init__()
         global edfmd5
+        global jsonpath
+        global user_annot_file
+
         annotations_layout = QVBoxLayout()
         self.label = QLabel("ANNOTATIONS MUST BE IN A TXT IN FORMAT (annotnum, start, end)")
-        color_label = QLabel("Types: 1 – Clean EEG, 2 – Device Interference, 3 – EMG, 4 – Movement, 5 – Electrode, 6 – HF ventilation, 7 – Biological Rhythm, 8 - Seizure")
+        #color_label = QLabel("Types: 1 – Clean EEG, 2 – Device Interference, 3 – EMG, 4 – Movement, 5 – Electrode, 6 – HF ventilation, 7 – Biological Rhythm, 8 - Seizure")
         labels = ["Clean EEG", "Device Interference", "EMG", "Movement", "Electrode", "HF ventilation", "Biological Rhythm", "Seizure", "?", "??", "???"]
         colors = ["red", "orange", "yellow", "green", "blue", "indigo", "violet", "magenta", "cyan", "black"]
 
         annotations_layout.addWidget(self.label)
-        annotations_layout.addWidget(color_label)
+        ##annotations_layout.addWidget(color_label)
 
-        user_annots = QTableWidget()
-        user_annots.setColumnCount(3)
-        user_annots.setRowCount(99) # TEMP, need to get num of lines before adding anything
+        self.user_annots = QTableWidget()
+        self.user_annots.setColumnCount(3)
+        self.user_annots.setRowCount(99) # TEMP, need to get num of lines before adding anything
 
         self.loaded_annots = QTableWidget()
         self.loaded_annots.setColumnCount(3)
@@ -359,25 +372,40 @@ class AnnotationLoadWidget(QWidget):
         edfmd5 = getmd5(main_widget.dataset_file.get_file_path()) # testing if parts work if this is here
         print(edfmd5)
 
-        if os.path.isfile(edfmd5 + "_annotations.txt"):
-            with open(edfmd5 + "_annotations.txt", 'r') as file:
-                line_num = 1
-                user_annots.setItem(0, 0, QTableWidgetItem("Annot Type"))
-                user_annots.setItem(0, 1, QTableWidgetItem("Start Time"))
-                user_annots.setItem(0, 2, QTableWidgetItem("End Time"))
-                for line in file:
-                    if line != "":
-                        annotation = line.strip('\n').split(',')
-                        user_annots.setItem(line_num, 0, QTableWidgetItem(labels[int(annotation[0])]))
-                        user_annots.setItem(line_num, 1, QTableWidgetItem(annotation[1]))
-                        user_annots.setItem(line_num, 2, QTableWidgetItem(annotation[2]))
-                        line_num += 1
+        f = open('filepath.json')
+
+        data = json.load(f)
+
+        jsonpath = data['path']
+
+        user_annot_file = jsonpath + edfmd5 + "_annotations.txt"#
 
         self.user_label = QLabel("Annotations created in program")
         annotations_layout.addWidget(self.user_label)
-        annotations_layout.addWidget(user_annots)
 
-        self.annot_file = DatasetFilePicker("Select TXT file to load", load_annots, "Load")
+        self.annot_folder = FilePicker("Select Directory", change_directory, "Set Directory")
+        self.annot_folder.file_path.setText(jsonpath)
+        annotations_layout.addWidget(self.annot_folder)
+
+        if os.path.isfile(user_annot_file):
+            with open(user_annot_file, 'r') as file:
+                line_num = 1
+                self.user_annots.setItem(0, 0, QTableWidgetItem("Annot Type"))
+                self.user_annots.setItem(0, 1, QTableWidgetItem("Start Time"))
+                self.user_annots.setItem(0, 2, QTableWidgetItem("End Time"))
+                for line in file:
+                    if line != "":
+                        annotation = line.strip('\n').split(',')
+                        self.user_annots.setItem(line_num, 0, QTableWidgetItem(labels[int(annotation[0])]))
+                        self.user_annots.setItem(line_num, 1, QTableWidgetItem(annotation[1]))
+                        self.user_annots.setItem(line_num, 2, QTableWidgetItem(annotation[2]))
+                        line_num += 1
+
+        annotations_layout.addWidget(self.user_annots)
+
+        self.annot_file = FilePicker("Select TXT file to load", load_annots, "Load")
+        self.load_label = QLabel("Loaded annotations")
+        annotations_layout.addWidget(self.load_label)
         annotations_layout.addWidget(self.annot_file)
         annotations_layout.addWidget(self.loaded_annots)
         self.setLayout(annotations_layout)
@@ -402,25 +430,40 @@ def load_annots():
                     line_num += 1
 
 
-class CreateAnnotation(QWidget):
-    def __init__(self):
-        super().__init__()
-        annotation_layout = QVBoxLayout()
-        color_label = QLabel("Types: 1 – Clean EEG, 2 – Device Interference, 3 – EMG, 4 – Movement, 5 – Electrode, 6 – HF ventilation, 7 – Biological Rhythm")
-        annotation_layout.addWidget(color_label)
+def change_directory():
+    global jsonpath
+    global edfmd5
+    labels = ["Clean EEG", "Device Interference", "EMG", "Movement", "Electrode", "HF ventilation", "Biological Rhythm",
+              "Seizure", "?", "??", "???"]
+    if os.path.isfile("filepath.json"):
+        with open('filepath.json', "w") as f:
+            new_path = main_widget.annot_win.annot_folder.get_file_path()
+            if new_path.endswith("/"):
+                new_path = new_path[:-1]
+            data = {"path": new_path+"/"}
+            jsonpath = main_widget.annot_win.annot_folder.get_file_path()+"/"
 
-        start_time = QLineEdit()
-        start_time.setPlaceholderText("Start")
+            f.write(json.dumps(data, ensure_ascii = False))
+    main_widget.annot_win.user_annots.clear()
 
-        end_time = QLineEdit()
-        end_time.setPlaceholderText("End")
+    if os.path.isfile(new_path + "/" + edfmd5 + "_annotations.txt"):
+        with open(new_path + "/" + edfmd5 + "_annotations.txt", 'r') as file:
+            line_num = 1
+            main_widget.annot_win.user_annots.setItem(0, 0, QTableWidgetItem("Annot Type"))
+            main_widget.annot_win.user_annots.setItem(0, 1, QTableWidgetItem("Start Time"))
+            main_widget.annot_win.user_annots.setItem(0, 2, QTableWidgetItem("End Time"))
+            for line in file:
+                if line != "":
+                    annotation = line.strip('\n').split(',')
+                    main_widget.annot_win.user_annots.setItem(line_num, 0, QTableWidgetItem(labels[int(annotation[0])]))
+                    main_widget.annot_win.user_annots.setItem(line_num, 1, QTableWidgetItem(annotation[1]))
+                    main_widget.annot_win.user_annots.setItem(line_num, 2, QTableWidgetItem(annotation[2]))
+                    line_num += 1
 
-        annotation_layout.addWidget(start_time)
-        annotation_layout.addWidget(end_time)
-
-        self.setLayout(annotation_layout)
 
 edfmd5 = None
+jsonpath = None
+user_annot_file = None
 
 app = QApplication(sys.argv)
 window = QWidget()
