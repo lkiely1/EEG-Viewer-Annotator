@@ -48,8 +48,14 @@ class FilePicker(QWidget):  # class used to prevent duplicate code
         main_layout.addLayout(self.layout)
 
     def browse_file(self):
-        if self.title != "Select Directory":
-            file_path, _ = QFileDialog.getOpenFileName(self, self.title, "", "All Files (*)")
+        if self.file_load != change_directory:
+            if self.file_load == main_widget.load_dataset:
+                file_filter = "EDF file (*.edf)"
+            elif self.file_load == load_annots:
+                file_filter = "TXT file (*.txt)"
+            else:
+                file_filter = "All Files (*)"
+            file_path, _ = QFileDialog.getOpenFileName(self, self.title, "", file_filter)
         else:
             file_path = QFileDialog.getExistingDirectory(self, self.title, "")
         # may change "all files" for edf or csv only (if figure out how to do either), may need "file_type" variable
@@ -73,22 +79,26 @@ def convert():
 def plot_data(data, list_widget, start_time, end_time):
     # for input validation, need to get file length to compare here
 
-    for i in reversed(
-            range(plot_layout.count())):  # prevent duplicates (though might be useful if want to compare data)
+    for i in reversed(range(plot_layout.count())):  # prevent duplicates
         plot_layout.itemAt(i).widget().deleteLater()
 
-    if int(start_time.text()) < 0 or start_time.text() == "":
+    if start_time.text() == "":
         print('Start time invalid')
-    elif int(end_time.text()) < int(start_time.text()) or start_time.text() == "":
+        return
+    elif end_time.text() == "":
         print('End time invalid')
+        return
     else:
         start = int(start_time.text())
         end = int(end_time.text())
 
         channels = []
-
         for item in list_widget.selectedItems():
             channels.append(item.text())  # get selected channel from list widget
+        if len(channels) == 0:
+            print('No channels selected')
+            return
+
 
         print(f"TEST - start {start}, end {end}, {channels}")
 
@@ -302,8 +312,10 @@ class MainGuiWidget(QWidget):
         amount_time.setPlaceholderText("Amount of time")
 
         plot_button = QPushButton("Plot")
+        #if start_time.text() != "" and end_time.text() != "":
         plot_button.clicked.connect(lambda: plot_data(data, list_widget, start_time, end_time))
-        # i think lambda lets you pass arguments into function when pressing a button?
+        #else:
+            #print("Please enter time values")
 
         self.annot_win = AnnotationLoadWidget()
 
@@ -324,12 +336,9 @@ class MainGuiWidget(QWidget):
 
         # onchange
 
-        start_time.textChanged.connect(
-            lambda: self.time_calculation(start_time, end_time, amount_time, int(file_length), 1))
-        end_time.textChanged.connect(
-            lambda: self.time_calculation(start_time, end_time, amount_time, int(file_length), 2))
-        amount_time.textChanged.connect(
-            lambda: self.time_calculation(start_time, end_time, amount_time, int(file_length), 3))
+        start_time.textChanged.connect(lambda: self.time_calculation(start_time, end_time, amount_time, int(file_length), 1))
+        end_time.textChanged.connect(lambda: self.time_calculation(start_time, end_time, amount_time, int(file_length), 2))
+        amount_time.textChanged.connect(lambda: self.time_calculation(start_time, end_time, amount_time, int(file_length), 3))
 
         main_layout.addLayout(plot_options_layout)
 
@@ -363,8 +372,9 @@ class MainGuiWidget(QWidget):
             if int(start.text()) < 0:  # used to keep all 3 values in range 0 - file_length
                 start.setText(str(0))
 
-            if start.text() != "" and end.text() != "" and int(end.text()) < int(start.text()):
-                end.setText(str(int(start.text()) + 1))
+            #if start.text() != "" and end.text() != "" and int(end.text()) < int(start.text()):
+            #    end.setText(str(int(start.text()) + 1))
+            # difficult to use properly, will ask others how theyd expect this to behave
 
             if int(start.text()) >= max_length:
                 start.setText(str(max_length - 1))
