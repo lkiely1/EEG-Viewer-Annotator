@@ -16,29 +16,28 @@ from matplotlib import pyplot as plt
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
-
 matplotlib.use('qt5agg')
 
 from edf_to_csv import edf_to_csv
 
 from plot_csv import plot
 
-dev_mode = 0    # 0 means load edf, 1 means load csv or convert
+dev_mode = 0  # 0 means load edf, 1 means load csv or convert
 
 
-class FilePicker(QWidget): # class used to prevent duplicate code
+class FilePicker(QWidget):  # class used to prevent duplicate code
     def __init__(self, title, file_load, button_text):
         super().__init__()
-        self.title = title # text at top of window when selecting file
-        self.file_load = file_load # if loading edf or csv
+        self.title = title  # text at top of window when selecting file
+        self.file_load = file_load  # if loading edf or csv
 
-        self.file_path = QLineEdit() # file path as text
-        self.file_path.setReadOnly(True) # disable editing file path (may change later?)
+        self.file_path = QLineEdit()  # file path as text
+        self.file_path.setReadOnly(True)  # disable editing file path (may change later?)
 
         self.browse_button = QPushButton("Browse")
         self.browse_button.clicked.connect(self.browse_file)
 
-        self.load_button = QPushButton(button_text) # "convert" or "load"
+        self.load_button = QPushButton(button_text)  # "convert" or "load"
         self.load_button.clicked.connect(self.file_load)
 
         self.layout = QHBoxLayout()
@@ -59,7 +58,7 @@ class FilePicker(QWidget): # class used to prevent duplicate code
 
     def get_file_path(self):
         print(self)
-        return self.file_path.text() # returns string of path for convertor/loader
+        return self.file_path.text()  # returns string of path for convertor/loader
 
 
 def convert():
@@ -74,7 +73,8 @@ def convert():
 def plot_data(data, list_widget, start_time, end_time):
     # for input validation, need to get file length to compare here
 
-    for i in reversed(range(plot_layout.count())): # prevent duplicates (though might be useful if want to compare data)
+    for i in reversed(
+            range(plot_layout.count())):  # prevent duplicates (though might be useful if want to compare data)
         plot_layout.itemAt(i).widget().deleteLater()
 
     if int(start_time.text()) < 0 or start_time.text() == "":
@@ -88,14 +88,14 @@ def plot_data(data, list_widget, start_time, end_time):
         channels = []
 
         for item in list_widget.selectedItems():
-            channels.append(item.text())    # get selected channel from list widget
+            channels.append(item.text())  # get selected channel from list widget
 
         print(f"TEST - start {start}, end {end}, {channels}")
 
-        #file_path = main_widget.dataset_file.get_file_path()
-        #fig, axs = plot(file_path, data, channels, start, end) made memory leak worse, wasnt even needed
+        # file_path = main_widget.dataset_file.get_file_path()
+        # fig, axs = plot(file_path, data, channels, start, end) made memory leak worse, wasnt even needed
 
-        #plt.show() #for outside of window plot
+        # plt.show() #for outside of window plot
 
         for i in reversed(range(window_layout.count())):  # kind of works?
             if window_layout.itemAt(i).widget() == plot_splitter:
@@ -105,16 +105,15 @@ def plot_data(data, list_widget, start_time, end_time):
                         widget.setParent(None)
                         if widget is not main_widget:
                             widget.deleteLater()
-                            gc.collect() # dont think is doing anything
+                            gc.collect()  # dont think is doing anything
 
         plot_gui = PlotGuiWidget(data, channels, start, end)
 
-
-        #plot_splitter = QSplitter(Qt.Horizontal) # if remove atm cant plot twice, (canvas disappears), on 3rd crash
+        # plot_splitter = QSplitter(Qt.Horizontal) # if remove atm cant plot twice, (canvas disappears), on 3rd crash
 
         plot_splitter.addWidget(main_widget)
         plot_splitter.addWidget(plot_gui)
-        plot_splitter.setStretchFactor(0, 500) # not sure how exactly works rn
+        plot_splitter.setStretchFactor(0, 500)  # not sure how exactly works rn
         plot_splitter.setStretchFactor(1, 100)
 
         plot_splitter.setCollapsible(0, False)
@@ -133,7 +132,7 @@ class PlotGuiWidget(QWidget):
 
         self.canvas = self.create_plot(csv, channels, start, end)
 
-        self.canvas.setMinimumWidth(600)    # i think this is an ok fix? will ask if it shouldn't be hard coded like this
+        self.canvas.setMinimumWidth(600)  # i think this is an ok fix? will ask if it shouldn't be hard coded like this
 
         toolbar = NavigationToolbar(self.canvas, self)
         plot_layout.addWidget(toolbar)
@@ -148,7 +147,8 @@ class PlotGuiWidget(QWidget):
         global jsonpath
         user_annot_file = jsonpath + edfmd5 + "_annotations.txt"
         print(user_annot_file)
-        fig, axs = plot(annotations_file_path, user_annot_file, dataframe, channels, start, end, app) # pass app to prevent crash
+        fig, axs = plot(annotations_file_path, user_annot_file, dataframe, channels, start, end,
+                        app)  # pass app to prevent crash
         canvas = FigureCanvas(figure=fig)
         return canvas
 
@@ -181,12 +181,48 @@ class MainGuiWidget(QWidget):
     def load_dataset(self):
         print("TEST")
         global edfmd5
-        bipolar = False
+
         if dev_mode == 0:  # load edf
             raw = mne.io.read_raw_edf(main_widget.dataset_file.get_file_path())
             data = raw.to_data_frame()
-            #if bipolar == True:
-            #    new_data =
+            bipolar = False
+            for col in data.columns:
+                if "-REF" in col:
+                    bipolar = True
+                    break
+                else:
+                    bipolar = False
+                    # this way dont need user to select bipolar or not, and only works if data not bipolar yet
+
+            if bipolar:
+                data.columns = data.columns.str.replace('EEG ', '')
+                data.columns = data.columns.str.replace('-REF', '')  # for cleaning
+
+                new_data = pd.DataFrame()
+
+                # idk if theres a better way to do this for this dataset
+                # only being tested on this dataset : https://zenodo.org/records/4940267
+                new_data.insert(0, 'time', data['time'])
+                new_data.insert(1, 'Fp1-F3', data['Fp1'] - data['F3'])
+                new_data.insert(2, 'F3-C3', data['F3'] - data['C3'])
+                new_data.insert(3, 'C3-P3', data['C3'] - data['P3'])
+                new_data.insert(4, 'P3-O1', data['P3'] - data['O1'])
+                new_data.insert(5, 'Fp2-F4', data['Fp2'] - data['F4'])
+                new_data.insert(6, 'F4-C4', data['F4'] - data['C4'])
+                new_data.insert(7, 'C4-P4', data['C4'] - data['P4'])
+                new_data.insert(8, 'P4-O2', data['P4'] - data['O2'])
+                new_data.insert(9, 'Fp1-F7', data['Fp1'] - data['F7'])
+                new_data.insert(10, 'F7-T3', data['F7'] - data['T3'])
+                new_data.insert(11, 'T3-T5', data['T3'] - data['T5'])
+                new_data.insert(12, 'T5-01', data['T5'] - data['O1'])
+                new_data.insert(13, 'Fp2-F8', data['Fp2'] - data['F8'])
+                new_data.insert(14, 'F8-T4', data['F8'] - data['T4'])
+                new_data.insert(15, 'T4-T6', data['T4'] - data['T6'])
+                new_data.insert(16, 'T6-O2', data['T6'] - data['O2'])
+                new_data.insert(17, 'Fz-Cz', data['Fz'] - data['Cz'])
+                new_data.insert(18, 'Cz-Pz', data['Cz'] - data['Pz'])
+
+                data = new_data
             time_freq = raw.info['sfreq']
         elif dev_mode == 1:  # load csv
             data = pd.read_csv(main_widget.dataset_file.get_file_path())
@@ -288,9 +324,12 @@ class MainGuiWidget(QWidget):
 
         # onchange
 
-        start_time.textChanged.connect(lambda: self.time_calculation(start_time, end_time, amount_time, int(file_length), 1))
-        end_time.textChanged.connect(lambda: self.time_calculation(start_time, end_time, amount_time, int(file_length), 2))
-        amount_time.textChanged.connect(lambda: self.time_calculation(start_time, end_time, amount_time, int(file_length), 3))
+        start_time.textChanged.connect(
+            lambda: self.time_calculation(start_time, end_time, amount_time, int(file_length), 1))
+        end_time.textChanged.connect(
+            lambda: self.time_calculation(start_time, end_time, amount_time, int(file_length), 2))
+        amount_time.textChanged.connect(
+            lambda: self.time_calculation(start_time, end_time, amount_time, int(file_length), 3))
 
         main_layout.addLayout(plot_options_layout)
 
@@ -354,8 +393,9 @@ class AnnotationLoadWidget(QWidget):
 
         annotations_layout = QVBoxLayout()
         self.label = QLabel("ANNOTATIONS MUST BE IN A TXT IN FORMAT (annotnum, start, end)")
-        #color_label = QLabel("Types: 1 – Clean EEG, 2 – Device Interference, 3 – EMG, 4 – Movement, 5 – Electrode, 6 – HF ventilation, 7 – Biological Rhythm, 8 - Seizure")
-        labels = ["Clean EEG", "Device Interference", "EMG", "Movement", "Electrode", "HF ventilation", "Biological Rhythm", "Seizure", "?", "??", "???"]
+        # color_label = QLabel("Types: 1 – Clean EEG, 2 – Device Interference, 3 – EMG, 4 – Movement, 5 – Electrode, 6 – HF ventilation, 7 – Biological Rhythm, 8 - Seizure")
+        labels = ["Clean EEG", "Device Interference", "EMG", "Movement", "Electrode", "HF ventilation",
+                  "Biological Rhythm", "Seizure", "?", "??", "???"]
         colors = ["red", "orange", "yellow", "green", "blue", "indigo", "violet", "magenta", "cyan", "black"]
 
         annotations_layout.addWidget(self.label)
@@ -363,13 +403,13 @@ class AnnotationLoadWidget(QWidget):
 
         self.user_annots = QTableWidget()
         self.user_annots.setColumnCount(3)
-        self.user_annots.setRowCount(99) # TEMP, need to get num of lines before adding anything
+        self.user_annots.setRowCount(99)  # TEMP, need to get num of lines before adding anything
 
         self.loaded_annots = QTableWidget()
         self.loaded_annots.setColumnCount(3)
         self.loaded_annots.setRowCount(99)  # TEMP, need to get num of lines before adding anything
 
-        edfmd5 = getmd5(main_widget.dataset_file.get_file_path()) # testing if parts work if this is here
+        edfmd5 = getmd5(main_widget.dataset_file.get_file_path())  # testing if parts work if this is here
         print(edfmd5)
 
         f = open('filepath.json')
@@ -378,7 +418,7 @@ class AnnotationLoadWidget(QWidget):
 
         jsonpath = data['path']
 
-        user_annot_file = jsonpath + edfmd5 + "_annotations.txt"#
+        user_annot_file = jsonpath + edfmd5 + "_annotations.txt"  #
 
         self.user_label = QLabel("Annotations created in program")
         annotations_layout.addWidget(self.user_label)
@@ -440,10 +480,10 @@ def change_directory():
             new_path = main_widget.annot_win.annot_folder.get_file_path()
             if new_path.endswith("/"):
                 new_path = new_path[:-1]
-            data = {"path": new_path+"/"}
-            jsonpath = main_widget.annot_win.annot_folder.get_file_path()+"/"
+            data = {"path": new_path + "/"}
+            jsonpath = main_widget.annot_win.annot_folder.get_file_path() + "/"
 
-            f.write(json.dumps(data, ensure_ascii = False))
+            f.write(json.dumps(data, ensure_ascii=False))
     main_widget.annot_win.user_annots.clear()
 
     if os.path.isfile(new_path + "/" + edfmd5 + "_annotations.txt"):
@@ -471,8 +511,8 @@ window_layout = QHBoxLayout()
 
 plot_splitter = QSplitter(Qt.Horizontal)
 
-main_layout = QVBoxLayout() # layout all other layouts are added to
-plot_options_layout = QGridLayout() # declared here to prevent duplicates
+main_layout = QVBoxLayout()  # layout all other layouts are added to
+plot_options_layout = QGridLayout()  # declared here to prevent duplicates
 time_layout = QVBoxLayout()
 plot_layout = QVBoxLayout()
 window.setLayout(window_layout)

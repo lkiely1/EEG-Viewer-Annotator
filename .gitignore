@@ -23,3 +23,6 @@ pyqt5_gui_spliter.py
 pyqt5_gui_spliter2.py
 plot_csv_splitter.py
 filepath.json
+/__pycache__
+/__pycache__
+/.idea
