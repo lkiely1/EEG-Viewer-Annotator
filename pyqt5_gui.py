@@ -515,6 +515,14 @@ edfmd5 = None
 jsonpath = None
 user_annot_file = None
 
+if not os.path.isfile("filepath.json"):
+    print("CREATING JSON AND DIRECTORY")
+    if not os.path.isdir("annotations"):
+        os.mkdir('annotations')
+    with open('filepath.json', 'w') as file:
+        path = {'path': "annotations/"}
+        json.dump(path, file)
+
 app = QApplication(sys.argv)
 window = QWidget()
 window_layout = QHBoxLayout()
