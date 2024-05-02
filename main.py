@@ -20,7 +20,7 @@ matplotlib.use('qt5agg')
 
 from edf_to_csv import edf_to_csv
 
-from plot_csv import plot
+from plot_eeg import plot
 
 dev_mode = 0  # 0 means load edf, 1 means load csv or convert
 
