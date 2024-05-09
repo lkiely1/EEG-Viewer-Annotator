@@ -2,11 +2,11 @@ import gc
 import json
 import os
 import sys
-from memory_profiler import profile
+#from memory_profiler import profile
 import matplotlib
 import mne
 import hashlib
-import numpy as np
+import numpy as np # check if not needed
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIntValidator
 from PyQt5.QtWidgets import *
@@ -48,7 +48,7 @@ class FilePicker(QWidget):  # class used to prevent duplicate code
         main_layout.addLayout(self.layout)
 
     def browse_file(self):
-        if self.file_load != change_directory:
+        if self.file_load != change_directory: # checking function being used, matching file type to what func used for
             if self.file_load == main_widget.load_dataset:
                 file_filter = "EDF file (*.edf)"
             elif self.file_load == load_annots:
@@ -57,17 +57,16 @@ class FilePicker(QWidget):  # class used to prevent duplicate code
                 file_filter = "All Files (*)"
             file_path, _ = QFileDialog.getOpenFileName(self, self.title, "", file_filter)
         else:
-            file_path = QFileDialog.getExistingDirectory(self, self.title, "")
-        # may change "all files" for edf or csv only (if figure out how to do either), may need "file_type" variable
+            file_path = QFileDialog.getExistingDirectory(self, self.title, "") # directory instead of file
         if file_path:
             self.file_path.setText(file_path)
 
     def get_file_path(self):
         print(self)
-        return self.file_path.text()  # returns string of path for convertor/loader
+        return self.file_path.text()  # returns string of path
 
 
-def convert():
+def convert(): # unused since not converting edf to csv anymore
     path = main_widget.edf_file.get_file_path()
     edf_to_csv(path)
 
@@ -77,16 +76,15 @@ def convert():
 
 
 def plot_data(data, list_widget, start_time, end_time):
-    # for input validation, need to get file length to compare here
 
-    for i in reversed(range(plot_layout.count())):  # prevent duplicates
+    for i in reversed(range(plot_layout.count())):  # prevent duplicates, deletes prev widgets if exist
         plot_layout.itemAt(i).widget().deleteLater()
 
     if start_time.text() == "":
         print('Start time invalid')
         return
     elif end_time.text() == "":
-        print('End time invalid')
+        print('End time invalid') # if user tries to plot without a time value
         return
     else:
         start = int(start_time.text())
@@ -102,12 +100,7 @@ def plot_data(data, list_widget, start_time, end_time):
 
         print(f"TEST - start {start}, end {end}, {channels}")
 
-        # file_path = main_widget.dataset_file.get_file_path()
-        # fig, axs = plot(file_path, data, channels, start, end) made memory leak worse, wasnt even needed
-
-        # plt.show() #for outside of window plot
-
-        for i in reversed(range(window_layout.count())):  # kind of works?
+        for i in reversed(range(window_layout.count())):  # used to prevent visual issue with splitter if plotted before
             if window_layout.itemAt(i).widget() == plot_splitter:
                 for i in reversed(range(plot_splitter.count())):
                     widget = plot_splitter.widget(i)
@@ -115,18 +108,16 @@ def plot_data(data, list_widget, start_time, end_time):
                         widget.setParent(None)
                         if widget is not main_widget:
                             widget.deleteLater()
-                            gc.collect()  # dont think is doing anything
+                            gc.collect()  # dont think is doing anything, mem leak still exists
 
-        plot_gui = PlotGuiWidget(data, channels, start, end)
-
-        # plot_splitter = QSplitter(Qt.Horizontal) # if remove atm cant plot twice, (canvas disappears), on 3rd crash
+        plot_gui = PlotGuiWidget(data, channels, start, end) # create plot widget
 
         plot_splitter.addWidget(main_widget)
         plot_splitter.addWidget(plot_gui)
-        plot_splitter.setStretchFactor(0, 500)  # not sure how exactly works rn
+        plot_splitter.setStretchFactor(0, 500)
         plot_splitter.setStretchFactor(1, 100)
 
-        plot_splitter.setCollapsible(0, False)
+        plot_splitter.setCollapsible(0, False) # stops widgets from being able to be hidden
         plot_splitter.setCollapsible(1, False)
 
         window_layout.addWidget(plot_splitter)
@@ -134,7 +125,7 @@ def plot_data(data, list_widget, start_time, end_time):
 
 
 class PlotGuiWidget(QWidget):
-    @profile
+    #@profile
     def __init__(self, csv, channels, start, end):
         super().__init__()
 
@@ -144,26 +135,26 @@ class PlotGuiWidget(QWidget):
 
         self.canvas.setMinimumWidth(600)  # i think this is an ok fix? will ask if it shouldn't be hard coded like this
 
-        toolbar = NavigationToolbar(self.canvas, self)
+        toolbar = NavigationToolbar(self.canvas, self) # toolbar for zoom/pan
         plot_layout.addWidget(toolbar)
 
         plot_layout.addWidget(self.canvas)
 
-    @profile
+    #@profile
     def create_plot(self, dataframe, channels, start, end):
-        annotations_file_path = main_widget.annot_win.annot_file.get_file_path()
+        annotations_file_path = main_widget.annot_win.annot_file.get_file_path() # path for loaded annots if any
         print(annotations_file_path)
         global edfmd5
         global jsonpath
-        user_annot_file = jsonpath + edfmd5 + "_annotations.txt"
+        user_annot_file = jsonpath + edfmd5 + "_annotations.txt" # path for user created annots (defined multiple times, need to fix)
         print(user_annot_file)
-        fig, axs = plot(annotations_file_path, user_annot_file, dataframe, channels, start, end,
-                        app)  # pass app to prevent crash
+        fig, axs = plot(annotations_file_path, user_annot_file, dataframe, channels, start, end, app)  # pass app to prevent crash
         canvas = FigureCanvas(figure=fig)
         return canvas
 
 
 def getmd5(edf):
+    # md5 is used for filename of user made annots file. seems to work very well. code here used to get hash of edf file
     md5 = hashlib.md5()
     f = open(edf, "rb")
     while chunk := f.read(4096):
@@ -176,11 +167,11 @@ class MainGuiWidget(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.annot_win = None
+        self.annot_win = None # needs to be defined as none(?)
         self.setLayout(main_layout)
         load_title = "Select EDF file to load"
 
-        if dev_mode == 1:
+        if dev_mode == 1: # 1 means load csv, not used anymore
             self.edf_file = FilePicker("Select EDF file to convert to CSV", convert, "Convert")
             main_layout.addWidget(self.edf_file)
             load_title = "Select CSV file to load"
@@ -193,47 +184,52 @@ class MainGuiWidget(QWidget):
         global edfmd5
 
         if dev_mode == 0:  # load edf
-            raw = mne.io.read_raw_edf(main_widget.dataset_file.get_file_path())
-            data = raw.to_data_frame()
-            bipolar = False
-            for col in data.columns:
-                if "-REF" in col:
-                    bipolar = True
-                    break
-                else:
-                    bipolar = False
-                    # this way dont need user to select bipolar or not, and only works if data not bipolar yet
+            if not os.path.isfile(main_widget.dataset_file.get_file_path()):
+                return
+            else:
+                raw = mne.io.read_raw_edf(main_widget.dataset_file.get_file_path())
+                data = raw.to_data_frame()
+                bipolar = False
+                for col in data.columns:
+                    if "-REF" in col or "-Ref" in col or "-ref" in col: # checks for "-ref" in column name, if exists need to make bipolar
+                        bipolar = True
+                        break
+                    else:
+                        bipolar = False
+                        # this way dont need user to select bipolar or not, and only works if data not bipolar yet
 
-            if bipolar:
-                data.columns = data.columns.str.replace('EEG ', '')
-                data.columns = data.columns.str.replace('-REF', '')  # for cleaning
+                if bipolar:
+                    data.columns = data.columns.str.replace('EEG ', '')
+                    data.columns = data.columns.str.replace('-REF', '')
+                    data.columns = data.columns.str.replace('-Ref', '')
+                    data.columns = data.columns.str.replace('-ref', '') # for cleaning
 
-                new_data = pd.DataFrame()
+                    new_data = pd.DataFrame() # create new df temporarily
 
-                # idk if theres a better way to do this for this dataset
-                # only being tested on this dataset : https://zenodo.org/records/4940267
-                new_data.insert(0, 'time', data['time'])
-                new_data.insert(1, 'Fp1-F3', data['Fp1'] - data['F3'])
-                new_data.insert(2, 'F3-C3', data['F3'] - data['C3'])
-                new_data.insert(3, 'C3-P3', data['C3'] - data['P3'])
-                new_data.insert(4, 'P3-O1', data['P3'] - data['O1'])
-                new_data.insert(5, 'Fp2-F4', data['Fp2'] - data['F4'])
-                new_data.insert(6, 'F4-C4', data['F4'] - data['C4'])
-                new_data.insert(7, 'C4-P4', data['C4'] - data['P4'])
-                new_data.insert(8, 'P4-O2', data['P4'] - data['O2'])
-                new_data.insert(9, 'Fp1-F7', data['Fp1'] - data['F7'])
-                new_data.insert(10, 'F7-T3', data['F7'] - data['T3'])
-                new_data.insert(11, 'T3-T5', data['T3'] - data['T5'])
-                new_data.insert(12, 'T5-01', data['T5'] - data['O1'])
-                new_data.insert(13, 'Fp2-F8', data['Fp2'] - data['F8'])
-                new_data.insert(14, 'F8-T4', data['F8'] - data['T4'])
-                new_data.insert(15, 'T4-T6', data['T4'] - data['T6'])
-                new_data.insert(16, 'T6-O2', data['T6'] - data['O2'])
-                new_data.insert(17, 'Fz-Cz', data['Fz'] - data['Cz'])
-                new_data.insert(18, 'Cz-Pz', data['Cz'] - data['Pz'])
+                    # idk if theres a better way to do this for this dataset
+                    # only being tested on this dataset : https://zenodo.org/records/4940267
+                    new_data.insert(0, 'time', data['time'])
+                    new_data.insert(1, 'Fp1-F3', data['Fp1'] - data['F3'])
+                    new_data.insert(2, 'F3-C3', data['F3'] - data['C3'])
+                    new_data.insert(3, 'C3-P3', data['C3'] - data['P3'])
+                    new_data.insert(4, 'P3-O1', data['P3'] - data['O1'])
+                    new_data.insert(5, 'Fp2-F4', data['Fp2'] - data['F4'])
+                    new_data.insert(6, 'F4-C4', data['F4'] - data['C4'])
+                    new_data.insert(7, 'C4-P4', data['C4'] - data['P4'])
+                    new_data.insert(8, 'P4-O2', data['P4'] - data['O2'])
+                    new_data.insert(9, 'Fp1-F7', data['Fp1'] - data['F7'])
+                    new_data.insert(10, 'F7-T3', data['F7'] - data['T3'])
+                    new_data.insert(11, 'T3-T5', data['T3'] - data['T5'])
+                    new_data.insert(12, 'T5-01', data['T5'] - data['O1'])
+                    new_data.insert(13, 'Fp2-F8', data['Fp2'] - data['F8'])
+                    new_data.insert(14, 'F8-T4', data['F8'] - data['T4'])
+                    new_data.insert(15, 'T4-T6', data['T4'] - data['T6'])
+                    new_data.insert(16, 'T6-O2', data['T6'] - data['O2'])
+                    new_data.insert(17, 'Fz-Cz', data['Fz'] - data['Cz'])
+                    new_data.insert(18, 'Cz-Pz', data['Cz'] - data['Pz'])
 
-                data = new_data
-            time_freq = raw.info['sfreq']
+                    data = new_data # put new df into old df
+                time_freq = raw.info['sfreq']
         elif dev_mode == 1:  # load csv
             data = pd.read_csv(main_widget.dataset_file.get_file_path())
             time_freq = 0
@@ -296,6 +292,7 @@ class MainGuiWidget(QWidget):
         # label to let user know how long file is
         data_time = QLabel(f"Length of data: {int(file_length)}s")
 
+
         # text entries for time
         int_validator = QIntValidator(0, int(file_length))  # used to force vals to be for int only
 
@@ -312,10 +309,8 @@ class MainGuiWidget(QWidget):
         amount_time.setPlaceholderText("Amount of time")
 
         plot_button = QPushButton("Plot")
-        #if start_time.text() != "" and end_time.text() != "":
+
         plot_button.clicked.connect(lambda: plot_data(data, list_widget, start_time, end_time))
-        #else:
-            #print("Please enter time values")
 
         self.annot_win = AnnotationLoadWidget()
 
@@ -327,12 +322,20 @@ class MainGuiWidget(QWidget):
         plot_options_layout.addWidget(list_deselect_all, 1, 1)
         plot_options_layout.addWidget(annotation_load_button, 2, 0, 2, 2)
 
+        label_w = data_time.sizeHint().width() # set max width of below widgets to width of label
+        data_time.setMaximumWidth(label_w)
+        start_time.setMaximumWidth(label_w)
+        end_time.setMaximumWidth(label_w)
+        amount_time.setMaximumWidth(label_w)
+        plot_button.setMaximumWidth(label_w)
+
         time_layout.addWidget(data_time)
         time_layout.addWidget(start_time)
         time_layout.addWidget(end_time)
         time_layout.addWidget(amount_time)
         time_layout.addWidget(plot_button)
         plot_options_layout.addLayout(time_layout, 0, 2)
+
 
         # onchange
 
@@ -342,20 +345,21 @@ class MainGuiWidget(QWidget):
 
         main_layout.addLayout(plot_options_layout)
 
-    def annotation_window_toggle(self, checked):
+    def annotation_window_toggle(self, checked): # lets annotation window be toggleable, this way data isnt deleted when closed
         if self.annot_win.isVisible():
             self.annot_win.hide()
         else:
             self.annot_win.show()
 
-    def select_all(self, col_list):
+    def select_all(self, col_list): # select everything in list widget
         for i in range(col_list.count()):
             col_list.item(i).setSelected(True)
 
-    def deselect_all(self, col_list):
+    def deselect_all(self, col_list): # deselect everything in list widget
         col_list.clearSelection()
 
     def time_calculation(self, start, end, amount, max_length, case):
+        # used to automatically calculate 1 value if 2 are filled in (e.g., duration = diff between start and end)
         print(f"{str(start.text())}, {str(end.text())}, {str(amount.text())}, {max_length}, {case}")  # for testing
         try:  # currently if user tries to clear entry later, runs function twice to get val again. not sure how to stop
             # also must be why cant change amount value
@@ -390,11 +394,11 @@ class MainGuiWidget(QWidget):
                 amount.setText(str(max_length))
 
         except ValueError:
-            print("Invalid value")  # sometimes prints for what seems like no reason?
+            #print("Invalid value")  # sometimes prints for what seems like no reason?
             pass
 
 
-class AnnotationLoadWidget(QWidget):
+class AnnotationLoadWidget(QWidget): # for displaying annotations from loaded file or user generated ones
     def __init__(self):
         super().__init__()
         global edfmd5
@@ -411,7 +415,7 @@ class AnnotationLoadWidget(QWidget):
         annotations_layout.addWidget(self.label)
         ##annotations_layout.addWidget(color_label)
 
-        self.user_annots = QTableWidget()
+        self.user_annots = QTableWidget()  # table widget used to display values
         self.user_annots.setColumnCount(3)
         self.user_annots.setRowCount(99)  # TEMP, need to get num of lines before adding anything
 
@@ -446,6 +450,7 @@ class AnnotationLoadWidget(QWidget):
                 for line in file:
                     if line != "":
                         annotation = line.strip('\n').split(',')
+                        # get annot label from annot num and display label instead
                         self.user_annots.setItem(line_num, 0, QTableWidgetItem(labels[int(annotation[0])]))
                         self.user_annots.setItem(line_num, 1, QTableWidgetItem(annotation[1]))
                         self.user_annots.setItem(line_num, 2, QTableWidgetItem(annotation[2]))
@@ -461,7 +466,7 @@ class AnnotationLoadWidget(QWidget):
         self.setLayout(annotations_layout)
 
 
-def load_annots():
+def load_annots(): # could be changed to avoid similar code to above, may not have time
     labels = ["Clean EEG", "Device Interference", "EMG", "Movement", "Electrode", "HF ventilation", "Biological Rhythm",
               "Seizure", "?", "??", "???"]
     loaded_annots = main_widget.annot_win.loaded_annots
@@ -480,7 +485,7 @@ def load_annots():
                     line_num += 1
 
 
-def change_directory():
+def change_directory(): # lets user change generated annot file dir + change table widget (not optimal)
     global jsonpath
     global edfmd5
     labels = ["Clean EEG", "Device Interference", "EMG", "Movement", "Electrode", "HF ventilation", "Biological Rhythm",
@@ -511,17 +516,18 @@ def change_directory():
                     line_num += 1
 
 
-edfmd5 = None
+edfmd5 = None # def as none as global later
 jsonpath = None
 user_annot_file = None
 
-if not os.path.isfile("filepath.json"):
+if not os.path.isfile("filepath.json"): # create json and/or dir if not exist
     print("CREATING JSON AND DIRECTORY")
     if not os.path.isdir("annotations"):
         os.mkdir('annotations')
     with open('filepath.json', 'w') as file:
         path = {'path': "annotations/"}
         json.dump(path, file)
+
 
 app = QApplication(sys.argv)
 window = QWidget()
