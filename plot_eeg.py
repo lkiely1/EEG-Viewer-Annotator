@@ -1,15 +1,5 @@
-import sys
-
-from PyQt5 import QtWidgets, QtCore, QtGui
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QIntValidator, QDoubleValidator
+from PyQt5.QtGui import QIntValidator
 from PyQt5.QtWidgets import *
-#from memory_profiler import profile
-import numpy as np
-import pandas as pd # check if not needed
-
-import mne
-#import gc
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -20,9 +10,6 @@ import os.path
 from pathlib import Path
 
 from matplotlib.patches import Rectangle
-from matplotlib.widgets import Slider
-
-from edf_to_csv import edf_to_csv
 
 save = None
 new_start = None
@@ -91,8 +78,7 @@ class CreateAnnotation(QWidget): # new window for when user is about to create n
                   "Biological Rhythm", "Seizure", "?", "??", "???"]
         colors = ["red", "orange", "yellow", "green", "blue", "indigo", "violet", "magenta", "cyan", "black"]
 
-        print("SAVE = TRUE")
-        print(f"new start: {new_start}, new end: {new_end}")
+        print("Saving annotation...")
         for i in range(len(col_names)+1):
             axs[i].add_patch(Rectangle((new_start, -200), width=new_annot_len, height=75, facecolor=colors[annot_num], fill=True))
             if i != len(col_names) + 1:
@@ -213,10 +199,8 @@ def plot(annotations_file_path, user_annot_file, eeg_data, col_names, min_time, 
                     annotate(annotation[0], int(annotation[1]), int(annotation[2]), int(annotation[3]),
                              int(annotation[4]), annotation[5])
     elif test_annot == 0:  # want to change so user has to choose annotations NOT made w/ program!
-        print(f" 1 {annotations_file_path}") #test
         if os.path.isfile(annotations_file_path):
             with open(annotations_file_path, 'r') as file:
-                print("Test")
                 for line in file:
                     if line != "":
                         annotation = line.strip('\n').split(',')
@@ -225,7 +209,6 @@ def plot(annotations_file_path, user_annot_file, eeg_data, col_names, min_time, 
                                  0, labels[int(annotation[0])])
     if os.path.isfile(user_annot_file):
         with open(user_annot_file, 'r') as file2:
-            print("Test user_annot_file")
             for line in file2:
                 if line != "":
                     annotation = line.strip('\n').split(',')
@@ -233,16 +216,7 @@ def plot(annotations_file_path, user_annot_file, eeg_data, col_names, min_time, 
                     annotate("bar", int(annotation[0]), int(annotation[1]), int(annotation[2]),
                              0, labels[int(annotation[0])])
     else:
-        print("TEST, No annotations")
-    ##else: # if only 1 in plot
-    #    print("only 1 channel in plot")
-    #    axs.plot(eeg_data.time, eeg_data[col_names[0]], 'tab:blue')
-    #    axs.set(ylabel=f"{col_names[0]}")
-
-    #    axs.set_xlim(min_time, max_time)  # need to get min max ylims?
-
-    #    axs.set(xlabel="Time (S)")
-    #    axs.set(ylabel="Amplitude/Voltage (uV)")
+        print("Not loading annotations from other file")
 
     press = None
     annot_box = None
@@ -282,7 +256,6 @@ def plot(annotations_file_path, user_annot_file, eeg_data, col_names, min_time, 
             global annot_box
             global init_x
             global x2
-            print("t")
             x2 = event.xdata
             width = x2 - annot_box.get_x()
             annot_box.set_width(width) # extend drawn annot
@@ -298,7 +271,6 @@ def plot(annotations_file_path, user_annot_file, eeg_data, col_names, min_time, 
         global annotation_num
         press = False
         if event.inaxes != axs[-1]: # start creating annot
-            print("t")
             global init_x
             global x2
             global annotation_num
@@ -311,7 +283,6 @@ def plot(annotations_file_path, user_annot_file, eeg_data, col_names, min_time, 
                 end = x2
                 annot_len = abs(start - end)
 
-            print(f"old start: {start}, old end: {end}")
             save_annotation(start, end, app, fig, axs, col_names, user_annot_file, annot_len, annot_box)
 
         fig.canvas.mpl_disconnect(on_click)

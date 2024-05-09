@@ -2,11 +2,9 @@ import gc
 import json
 import os
 import sys
-#from memory_profiler import profile
 import matplotlib
 import mne
 import hashlib
-import numpy as np # check if not needed
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIntValidator
 from PyQt5.QtWidgets import *
@@ -62,7 +60,6 @@ class FilePicker(QWidget):  # class used to prevent duplicate code
             self.file_path.setText(file_path)
 
     def get_file_path(self):
-        print(self)
         return self.file_path.text()  # returns string of path
 
 
@@ -97,9 +94,6 @@ def plot_data(data, list_widget, start_time, end_time):
             print('No channels selected')
             return
 
-
-        print(f"TEST - start {start}, end {end}, {channels}")
-
         for i in reversed(range(window_layout.count())):  # used to prevent visual issue with splitter if plotted before
             if window_layout.itemAt(i).widget() == plot_splitter:
                 for i in reversed(range(plot_splitter.count())):
@@ -125,7 +119,6 @@ def plot_data(data, list_widget, start_time, end_time):
 
 
 class PlotGuiWidget(QWidget):
-    #@profile
     def __init__(self, csv, channels, start, end):
         super().__init__()
 
@@ -140,14 +133,11 @@ class PlotGuiWidget(QWidget):
 
         plot_layout.addWidget(self.canvas)
 
-    #@profile
     def create_plot(self, dataframe, channels, start, end):
         annotations_file_path = main_widget.annot_win.annot_file.get_file_path() # path for loaded annots if any
-        print(annotations_file_path)
         global edfmd5
         global jsonpath
         user_annot_file = jsonpath + edfmd5 + "_annotations.txt" # path for user created annots (defined multiple times, need to fix)
-        print(user_annot_file)
         fig, axs = plot(annotations_file_path, user_annot_file, dataframe, channels, start, end, app)  # pass app to prevent crash
         canvas = FigureCanvas(figure=fig)
         return canvas
@@ -180,7 +170,6 @@ class MainGuiWidget(QWidget):
         main_layout.addWidget(self.dataset_file)
 
     def load_dataset(self):
-        print("TEST")
         global edfmd5
 
         if dev_mode == 0:  # load edf
@@ -206,7 +195,6 @@ class MainGuiWidget(QWidget):
 
                     new_data = pd.DataFrame() # create new df temporarily
 
-                    # idk if theres a better way to do this for this dataset
                     # only being tested on this dataset : https://zenodo.org/records/4940267
                     new_data.insert(0, 'time', data['time'])
                     new_data.insert(1, 'Fp1-F3', data['Fp1'] - data['F3'])
@@ -237,10 +225,7 @@ class MainGuiWidget(QWidget):
                 if row['time'] != 1:
                     time_freq += 1
                 elif row['time'] == 1:
-                    # print(row['time'])
                     break
-
-        print(f"time freq: {time_freq}")
 
         for i in reversed(range(plot_options_layout.count())):  # prevent duplicates
             widget = plot_options_layout.itemAt(i).widget()
@@ -283,11 +268,9 @@ class MainGuiWidget(QWidget):
                 if row['time'] != 1:
                     time_freq += 1
                 elif row['time'] == 1:
-                    # print(row['time'])
                     break
 
         file_length = len(data) / time_freq
-        print(f"test, {file_length}")
 
         # label to let user know how long file is
         data_time = QLabel(f"Length of data: {int(file_length)}s")
@@ -360,7 +343,6 @@ class MainGuiWidget(QWidget):
 
     def time_calculation(self, start, end, amount, max_length, case):
         # used to automatically calculate 1 value if 2 are filled in (e.g., duration = diff between start and end)
-        print(f"{str(start.text())}, {str(end.text())}, {str(amount.text())}, {max_length}, {case}")  # for testing
         try:  # currently if user tries to clear entry later, runs function twice to get val again. not sure how to stop
             # also must be why cant change amount value
             if start.text() != "" and end.text() != "" and (case == 1 or case == 2):
@@ -378,7 +360,7 @@ class MainGuiWidget(QWidget):
 
             #if start.text() != "" and end.text() != "" and int(end.text()) < int(start.text()):
             #    end.setText(str(int(start.text()) + 1))
-            # difficult to use properly, will ask others how theyd expect this to behave
+            # commented out as doesnt really work well in this way
 
             if int(start.text()) >= max_length:
                 start.setText(str(max_length - 1))
@@ -394,7 +376,6 @@ class MainGuiWidget(QWidget):
                 amount.setText(str(max_length))
 
         except ValueError:
-            #print("Invalid value")  # sometimes prints for what seems like no reason?
             pass
 
 
@@ -413,7 +394,6 @@ class AnnotationLoadWidget(QWidget): # for displaying annotations from loaded fi
         colors = ["red", "orange", "yellow", "green", "blue", "indigo", "violet", "magenta", "cyan", "black"]
 
         annotations_layout.addWidget(self.label)
-        ##annotations_layout.addWidget(color_label)
 
         self.user_annots = QTableWidget()  # table widget used to display values
         self.user_annots.setColumnCount(3)
@@ -423,8 +403,7 @@ class AnnotationLoadWidget(QWidget): # for displaying annotations from loaded fi
         self.loaded_annots.setColumnCount(3)
         self.loaded_annots.setRowCount(99)  # TEMP, need to get num of lines before adding anything
 
-        edfmd5 = getmd5(main_widget.dataset_file.get_file_path())  # testing if parts work if this is here
-        print(edfmd5)
+        edfmd5 = getmd5(main_widget.dataset_file.get_file_path())
 
         f = open('filepath.json')
 
@@ -432,7 +411,7 @@ class AnnotationLoadWidget(QWidget): # for displaying annotations from loaded fi
 
         jsonpath = data['path']
 
-        user_annot_file = jsonpath + edfmd5 + "_annotations.txt"  #
+        user_annot_file = jsonpath + edfmd5 + "_annotations.txt"
 
         self.user_label = QLabel("Annotations created in program")
         annotations_layout.addWidget(self.user_label)
@@ -521,8 +500,9 @@ jsonpath = None
 user_annot_file = None
 
 if not os.path.isfile("filepath.json"): # create json and/or dir if not exist
-    print("CREATING JSON AND DIRECTORY")
+    print("CREATING JSON")
     if not os.path.isdir("annotations"):
+        print("CREATING DIRECTORY")
         os.mkdir('annotations')
     with open('filepath.json', 'w') as file:
         path = {'path': "annotations/"}
