@@ -18,7 +18,7 @@ from plot_eeg import plot
 
 matplotlib.use('qt5agg')
 
-dev_mode = 0  # 0 means load edf, 1 means load csv or convert
+dev_mode = 0  # 0 means load edf, 1 means load csv and convert edf to csv. keep on 0 as converting to csv isn't needed
 bipolar_off = False  # set to true if you have issues with it on False. True will make it so program will not try to
 # create bipolar channels from dataset (otherwise will try to create them if detects "-REF" in column names)
 
@@ -150,14 +150,13 @@ def getmd5(edf):
     while chunk := f.read(4096):
         md5.update(chunk)
 
-    return md5.hexdigest()
+    return md5.hexdigest()  # md5 as string used for annotation txt file name
 
 
 class MainGuiWidget(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.annot_win = None  # needs to be defined as none(?)
         self.setLayout(main_layout)
         load_title = "Select EDF file to load"
 
@@ -232,7 +231,7 @@ class MainGuiWidget(QWidget):
 
         for i in reversed(range(plot_options_layout.count())):  # prevent duplicates
             widget = plot_options_layout.itemAt(i).widget()
-            if widget is not None:  # crash if try to delete None widget?
+            if widget is not None:  # crash if try to delete None widget so have to check it is not
                 widget.setParent(None)
                 widget.deleteLater()
 
@@ -332,8 +331,8 @@ class MainGuiWidget(QWidget):
 
         main_layout.addLayout(plot_options_layout)
 
-    def annotation_window_toggle(self,
-                                 checked):  # lets annotation window be toggleable, this way data isn't deleted when closed
+    def annotation_window_toggle(self, checked):
+        # lets annotation window be toggleable, this way data loaded isn't deleted when closed
         if self.annot_win.isVisible():
             self.annot_win.hide()
         else:
@@ -450,7 +449,7 @@ class AnnotationLoadWidget(QWidget):  # for displaying annotations from loaded f
         self.setLayout(annotations_layout)
 
 
-def load_annots():  # could be changed to avoid similar code to above, may not have time
+def load_annots():  # should be changed to avoid similar code to above and below
     labels = ["Clean EEG", "Device Interference", "EMG", "Movement", "Electrode", "HF ventilation", "Biological Rhythm",
               "Seizure", "?", "??", "???"]
     loaded_annots = main_widget.annot_win.loaded_annots

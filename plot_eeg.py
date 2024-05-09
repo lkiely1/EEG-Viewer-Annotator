@@ -46,7 +46,7 @@ class CreateAnnotation(QWidget):  # new window for when user is about to create 
         end_time.setValidator(end_validator)
         end_time.setPlaceholderText("End")
 
-        start_time.setText(str(start)) # start/end = values from selected range w/time box
+        start_time.setText(str(start))  # start/end = values from selected range w/time box
         end_time.setText(str(end))
 
         # run when changed
@@ -80,7 +80,8 @@ class CreateAnnotation(QWidget):  # new window for when user is about to create 
         print("Saving annotation...")
         for i in range(len(col_names)+1):
             axs[i].add_patch(Rectangle((new_start, -200), width=new_annot_len, height=75, facecolor=colors[annot_num], fill=True))
-            if i != len(col_names) + 1:
+            # add new annotation + label to all rows
+            if i != len(col_names):  # dont draw label on timeline
                 label_pos = new_start
                 label_y_pos = -200  # drawn on bar
                 axs[i].annotate(labels[annot_num], (label_pos, label_y_pos))  # add new annot to screen
@@ -124,7 +125,7 @@ def save_annotation(start, end, app, fig, axs, col_names, user_annot_file, annot
     window.show()
 
 
-def plot(annotations_file_path, user_annot_file, eeg_data, col_names, min_time, max_time, app):  # pass filepath into here
+def plot(annotations_file_path, user_annot_file, eeg_data, col_names, min_time, max_time, app):
     fig, axs = plt.subplots(len(col_names) + 1, sharey=True)
 
     plt.rcParams['lines.linewidth'] = 0.3
@@ -152,35 +153,36 @@ def plot(annotations_file_path, user_annot_file, eeg_data, col_names, min_time, 
         for i in range(len(col_names) + 1):  # func to draw annotations
             if annotation_num > 9:
                 annotation_num = 9  # black if too high
-            if annotate_type == "bg":
+            if annotate_type == "bg": # not used
                 # background colour
                 axs[i].axvspan(annotation_x, annotation_x2, color=colors[annotation_num], alpha=0.3)
                 label_pos = annotation_x + (abs(annotation_x2 - annotation_x) / 2)
                 label_y_pos = 100
 
-            elif annotate_type == "arrow":
+            elif annotate_type == "arrow": # not used
                 axs[i].annotate(label, xy=(annotation_x, annotation_y),
                                 xytext=(annotation_x - 10, annotation_y + 10),
                                 arrowprops=dict(facecolor=colors[annotation_num], shrink=0.05))
 
-            elif annotate_type == "line":
+            elif annotate_type == "line": # not used
                 axs[i].axvline(x=annotation_x, color=colors[annotation_num], linestyle='--')
                 label_pos = annotation_x + 1
                 label_y_pos = 100
 
-            elif annotate_type == "box":
+            elif annotate_type == "box": # not used
                 axs[i].add_patch(Rectangle((annotation_x, annotation_y), annotation_x2 - annotation_x, 500,
                                            edgecolor=colors[annotation_num], fill=False, linewidth=5))
                 label_pos = annotation_x + (abs(annotation_x2 - annotation_x) / 2)
                 label_y_pos = annotation_y + 50
 
-            elif annotate_type == "bar":
+            elif annotate_type == "bar": # used
                 axs[i].add_patch(Rectangle((annotation_x, -200), annotation_x2 - annotation_x, 75,
                                            facecolor=colors[annotation_num], fill=True))
                 label_pos = annotation_x
                 label_y_pos = -200  # drawn on bar
 
-            if annotate_type != "arrow" and i != len(col_names):
+            if annotate_type != "arrow" and i != len(col_names):  # draws labels (drawn here to avoid repeated code)
+                # pos declared with annot type
                 axs[i].annotate(label, (label_pos, label_y_pos))
 
     # axs.set(ylabel="Amplitude/Voltage (uV)") # not sure how to add back
@@ -245,7 +247,7 @@ def plot(annotations_file_path, user_annot_file, eeg_data, col_names, min_time, 
         state = fig.canvas.toolbar.mode
         if press == True and event.inaxes == time_box.axes and state == "":
             x = event.xdata
-            time_box.set_x(x)  # move time box
+            time_box.set_x(x)  # move time box to x pos
             for i in range(len(col_names)):
                 axs[i].set_xlim(x, x + (abs(min_time - max_time)))  # move shown time
             fig.canvas.draw()

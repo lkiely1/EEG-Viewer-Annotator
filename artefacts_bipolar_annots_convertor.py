@@ -1,5 +1,5 @@
+# used for summary annots from here: https://github.com/LockyWebb/NeonatalEEGArtefactDetection/tree/main
 
-## used for summary annots from here: https://github.com/LockyWebb/NeonatalEEGArtefactDetection/tree/main
 def annotations_convertor(filepath):
     for i in range(79):
         print(i + 1)
