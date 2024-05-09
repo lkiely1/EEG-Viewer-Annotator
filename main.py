@@ -19,6 +19,8 @@ from plot_eeg import plot
 matplotlib.use('qt5agg')
 
 dev_mode = 0  # 0 means load edf, 1 means load csv or convert
+bipolar_off = False  # set to true if you have issues with it on False. True will make it so program will not try to
+# create bipolar channels from dataset (otherwise will try to create them if detects "-REF" in column names)
 
 
 class FilePicker(QWidget):  # class used to prevent duplicate code
@@ -178,7 +180,10 @@ class MainGuiWidget(QWidget):
                 data = raw.to_data_frame()
                 bipolar = False
                 for col in data.columns:
-                    if "-REF" in col or "-Ref" in col or "-ref" in col:  # checks for "-ref" in column name, if exists need to make bipolar
+                    if bipolar_off == True:
+                        bipolar = False
+                        break
+                    elif "-REF" in col or "-Ref" in col or "-ref" in col:  # checks for "-ref" in column name, if exists need to make bipolar
                         bipolar = True
                         break
                     else:
