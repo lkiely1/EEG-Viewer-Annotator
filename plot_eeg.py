@@ -4,12 +4,12 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIntValidator, QDoubleValidator
 from PyQt5.QtWidgets import *
-from memory_profiler import profile
+#from memory_profiler import profile
 import numpy as np
-import pandas as pd
+import pandas as pd # check if not needed
 
 import mne
-import gc
+#import gc
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -29,8 +29,8 @@ new_start = None
 new_end = None
 
 
-class CreateAnnotation(QWidget):
-    def __init__(self, start, end, fig, axs, col_names, user_annot_file, annot_len):
+class CreateAnnotation(QWidget): # new window for when user is about to create new annot
+    def __init__(self, start, end, fig, axs, col_names, user_annot_file, annot_len, annot_box):
         super().__init__()
         annotation_layout = QVBoxLayout()
         labels = ["Clean EEG", "Device Interference", "EMG", "Movement", "Electrode", "HF ventilation",
@@ -41,9 +41,9 @@ class CreateAnnotation(QWidget):
         annotation_layout.addWidget(label)
         list_widget = QListWidget()
 
-        list_widget.clear()  # not sure if still need this
+        list_widget.clear()
 
-        list_widget.addItems(labels)
+        list_widget.addItems(labels) # list box for all annot types
         list_widget.setCurrentRow(0) # default of clean eeg
         annotation_layout.addWidget(list_widget)
 
@@ -60,28 +60,29 @@ class CreateAnnotation(QWidget):
         end_time.setPlaceholderText("End")
 
 
-        start_time.setText(str(start))
+        start_time.setText(str(start)) # start/end = values from selected range w/time box
         end_time.setText(str(end))
+
+        # run when changed
+        start_time.textChanged.connect(lambda: self.update_box(start_time, end_time, fig, axs, annot_box))
+        end_time.textChanged.connect(lambda: self.update_box(start_time, end_time, fig, axs, annot_box))
 
         annotation_layout.addWidget(start_time)
         annotation_layout.addWidget(end_time)
 
-
+        # run if saving/cancelling
         save_button = QPushButton("Save")
-        save_button.clicked.connect(lambda: self.save_annot(start_time, end_time, fig, axs, col_names, user_annot_file, annot_len, list_widget.currentRow()))
+        save_button.clicked.connect(lambda: self.save_annot(start_time, end_time, fig, axs, col_names, user_annot_file, annot_len, list_widget.currentRow(), annot_box))
 
         cancel_button = QPushButton("Cancel")
-        cancel_button.clicked.connect(self.cancel)
+        cancel_button.clicked.connect(lambda: self.cancel(fig, axs, annot_box))
 
         annotation_layout.addWidget(save_button)
         annotation_layout.addWidget(cancel_button)
 
         self.setLayout(annotation_layout)
 
-
-
-
-    def save_annot(self, start, end, fig, axs, col_names, user_annot_file, annot_len, annot_num):
+    def save_annot(self, start, end, fig, axs, col_names, user_annot_file, annot_len, annot_num, annot_box):
         new_start = int(start.text())
         new_end = int(end.text())
         new_annot_len = abs(new_end - new_start)
@@ -97,27 +98,48 @@ class CreateAnnotation(QWidget):
             if i != len(col_names) + 1:
                 label_pos = new_start
                 label_y_pos = -200  # drawn on bar
-                axs[i].annotate(labels[annot_num], (label_pos, label_y_pos))
+                axs[i].annotate(labels[annot_num], (label_pos, label_y_pos)) # add new annot to screen
         fig.canvas.draw()
         # save to file
-        with open(user_annot_file, 'a') as f:
+        with open(user_annot_file, 'a') as f: # save new annot to file
             f.write(f'{annot_num},{new_start},{new_end}')
             f.write('\n')
 
+        annot_box.remove() # remove box
+        fig.canvas.draw()
+
         self.close()
 
-    def cancel(self):
+    def cancel(self, fig, axs, annot_box):
+        annot_box.remove() # remove box
+        fig.canvas.draw()
         self.close()
 
+    def update_box(self, start_time, end_time, fig, axs, annot_box): # change annot box if values for new annot changed
+        # unsure if this should be used or not...
+        #if int(start_time.text()) > int(end_time.text()):
+        #    start = start_time.text()
+        #    end = end_time.text()
 
-def save_annotation(start, end, app, fig, axs, col_names, user_annot_file, annot_len):
-    start = round(start)
+        #    start_time.setText(end)
+        #    end_time.setText(start)
+
+        # works, can improve abit maybe
+        width = abs(int(start_time.text()) - int(end_time.text())) # get new width
+        annot_box.set_x(int(start_time.text())) # set new x start point
+        annot_box.set_width(width) # set new width
+        fig.canvas.draw()
+
+
+def save_annotation(start, end, app, fig, axs, col_names, user_annot_file, annot_len, annot_box):
+    start = round(start) # prevent very long floats
     end = round(end)
-    window = CreateAnnotation(start, end, fig, axs, col_names, user_annot_file, annot_len)
+    window = CreateAnnotation(start, end, fig, axs, col_names, user_annot_file, annot_len, annot_box)
+    # new window to let user update new annot if needed
     window.show()
 
 
-@profile
+#@profile
 def plot(annotations_file_path, user_annot_file, eeg_data, col_names, min_time, max_time, app):  # pass filepath into here
     fig, axs = plt.subplots(len(col_names) + 1, sharey=True)
 
@@ -132,18 +154,18 @@ def plot(annotations_file_path, user_annot_file, eeg_data, col_names, min_time, 
 
     axs[len(col_names) - 1].set(xlabel="Time (S)")
 
-    axs[len(col_names)].plot(eeg_data.time, eeg_data[col_names])
-    axs[len(col_names)].set_xlim(0, eeg_data.time.max())
+    axs[len(col_names)].plot(eeg_data.time, eeg_data[col_names]) # plot time againsts data in channels
+    axs[len(col_names)].set_xlim(0, eeg_data.time.max()) # xlim = 0 til end of time in df
 
     time_box = Rectangle((min_time, -300), abs(min_time - max_time), 500, edgecolor="grey",
-                         fill=False, linewidth=5)
+                         fill=False, linewidth=5) # box for time shown
     axs[len(col_names)].add_patch(time_box)
 
     labels = ["Clean EEG", "Device Interference", "EMG", "Movement", "Electrode", "HF ventilation", "Biological Rhythm", "Seizure", "?", "??", "???"]
     colors = ["red", "orange", "yellow", "green", "blue", "indigo", "violet", "magenta", "cyan", "black"]
 
     def annotate(annotate_type, annotation_num, annotation_x, annotation_x2, annotation_y, label):
-        for i in range(len(col_names) + 1):
+        for i in range(len(col_names) + 1): # func to draw annotations
             if annotation_num > 9:
                 annotation_num = 9  # black if too high
             if annotate_type == "bg":
@@ -179,11 +201,11 @@ def plot(annotations_file_path, user_annot_file, eeg_data, col_names, min_time, 
 
     # axs.set(ylabel="Amplitude/Voltage (uV)") # not sure how to add back
 
-    test_annot = 0
+    test_annot = 0 # unused, should always be 0
 
     if test_annot == 1:
         with open('annotation_test_file.txt', 'r') as file:
-            for line in file:
+            for line in file: # used to just test annotations w/o specifying eeg data
 
                 if line != "":
                     annotation = line.strip('\n').split(',')
@@ -191,10 +213,6 @@ def plot(annotations_file_path, user_annot_file, eeg_data, col_names, min_time, 
                     annotate(annotation[0], int(annotation[1]), int(annotation[2]), int(annotation[3]),
                              int(annotation[4]), annotation[5])
     elif test_annot == 0:  # want to change so user has to choose annotations NOT made w/ program!
-        # file_name = os.path.basename(annotations_file_path)
-        # expert = 'A' # possibly let user select expert (a, b or c)
-        # txt_file = file_name.replace('.edf', '_' + expert + '.txt')
-        # path = f"{os.path.dirname(annotations_file_path)}/annotations/{txt_file}" # change to just filepath from chosen annotations
         print(f" 1 {annotations_file_path}") #test
         if os.path.isfile(annotations_file_path):
             with open(annotations_file_path, 'r') as file:
@@ -232,16 +250,16 @@ def plot(annotations_file_path, user_annot_file, eeg_data, col_names, min_time, 
     x2 = None
     annotation_num = None
 
-    def on_click(event):
+    def on_click(event): # run when user clicks on plot
         global press
         global annot_box
         global init_x
 
-        state = fig.canvas.toolbar.mode
+        state = fig.canvas.toolbar.mode # to let user still use toolbar
         if event.inaxes == time_box.axes and state == "":
             press = True
-            fig.canvas.mpl_connect('motion_notify_event', on_motion)
-        elif event.inaxes != axs[-1] and state == "":
+            fig.canvas.mpl_connect('motion_notify_event', on_motion) # for moving time along
+        elif event.inaxes != axs[-1] and state == "": # for creating annot
             press = True
             # create rectangle at x pos
             init_x = event.xdata
@@ -255,9 +273,9 @@ def plot(annotations_file_path, user_annot_file, eeg_data, col_names, min_time, 
         state = fig.canvas.toolbar.mode
         if press == True and event.inaxes == time_box.axes and state == "":
             x = event.xdata
-            time_box.set_x(x)
+            time_box.set_x(x) # move time box
             for i in range(len(col_names)):
-                axs[i].set_xlim(x, x + (abs(min_time - max_time)))
+                axs[i].set_xlim(x, x + (abs(min_time - max_time))) # move shown time
             fig.canvas.draw()
             fig.canvas.mpl_connect('button_release_event', on_release)
         elif press == True and event.inaxes != axs[-1] and state == "":
@@ -267,11 +285,10 @@ def plot(annotations_file_path, user_annot_file, eeg_data, col_names, min_time, 
             print("t")
             x2 = event.xdata
             width = x2 - annot_box.get_x()
-            annot_box.set_width(width)
+            annot_box.set_width(width) # extend drawn annot
             fig.canvas.draw()
             fig.canvas.mpl_connect('button_release_event', on_release)
             # move rectangle
-            # check incase user draws backwards (lowest x is start)
 
     def on_release(event):
         global press
@@ -280,14 +297,12 @@ def plot(annotations_file_path, user_annot_file, eeg_data, col_names, min_time, 
         global x2
         global annotation_num
         press = False
-        annot_box.remove()
-        fig.canvas.draw()
-        if event.inaxes != axs[-1]:
+        if event.inaxes != axs[-1]: # start creating annot
             print("t")
             global init_x
             global x2
             global annotation_num
-            if init_x > x2:
+            if init_x > x2: # swap start and end times if needed
                 start = x2
                 end = init_x
                 annot_len = abs(start - end)
@@ -295,11 +310,9 @@ def plot(annotations_file_path, user_annot_file, eeg_data, col_names, min_time, 
                 start = init_x
                 end = x2
                 annot_len = abs(start - end)
-            # if annotation_num is None:
-            #    annotation_num = 0
 
             print(f"old start: {start}, old end: {end}")
-            save_annotation(start, end, app, fig, axs, col_names, user_annot_file, annot_len)
+            save_annotation(start, end, app, fig, axs, col_names, user_annot_file, annot_len, annot_box)
 
         fig.canvas.mpl_disconnect(on_click)
         fig.canvas.mpl_disconnect(on_motion)
@@ -310,6 +323,3 @@ def plot(annotations_file_path, user_annot_file, eeg_data, col_names, min_time, 
 
     return fig, axs
 
-# TEST
-# fig, axs = plot(pd.read_csv('chb01_02.csv'), ['FP1-F7', 'F7-T7'],1,120)
-# plt.show()
