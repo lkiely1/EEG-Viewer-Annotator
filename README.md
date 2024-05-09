@@ -8,7 +8,7 @@ Developed as part of research project at MTU
 # Features
 
 Load edf file: User selects EDF file to load using filepicker
-![load 1.png](/readme_assets/load 1.png)
+![load-1.png](/readme_assets/load-1.png)
 
 Choose channels: User can select 1 or all channels from list box
 
