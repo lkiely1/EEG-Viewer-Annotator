@@ -13,12 +13,10 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from edf_to_csv import edf_to_csv
+from plot_eeg import plot
 
 matplotlib.use('qt5agg')
-
-from edf_to_csv import edf_to_csv
-
-from plot_eeg import plot
 
 dev_mode = 0  # 0 means load edf, 1 means load csv or convert
 
@@ -46,7 +44,7 @@ class FilePicker(QWidget):  # class used to prevent duplicate code
         main_layout.addLayout(self.layout)
 
     def browse_file(self):
-        if self.file_load != change_directory: # checking function being used, matching file type to what func used for
+        if self.file_load != change_directory:  # checking function being used, matching file type to what func used for
             if self.file_load == main_widget.load_dataset:
                 file_filter = "EDF file (*.edf)"
             elif self.file_load == load_annots:
@@ -55,7 +53,7 @@ class FilePicker(QWidget):  # class used to prevent duplicate code
                 file_filter = "All Files (*)"
             file_path, _ = QFileDialog.getOpenFileName(self, self.title, "", file_filter)
         else:
-            file_path = QFileDialog.getExistingDirectory(self, self.title, "") # directory instead of file
+            file_path = QFileDialog.getExistingDirectory(self, self.title, "")  # directory instead of file
         if file_path:
             self.file_path.setText(file_path)
 
@@ -63,7 +61,7 @@ class FilePicker(QWidget):  # class used to prevent duplicate code
         return self.file_path.text()  # returns string of path
 
 
-def convert(): # unused since not converting edf to csv anymore
+def convert():  # unused since not converting edf to csv anymore
     path = main_widget.edf_file.get_file_path()
     edf_to_csv(path)
 
@@ -73,7 +71,6 @@ def convert(): # unused since not converting edf to csv anymore
 
 
 def plot_data(data, list_widget, start_time, end_time):
-
     for i in reversed(range(plot_layout.count())):  # prevent duplicates, deletes prev widgets if exist
         plot_layout.itemAt(i).widget().deleteLater()
 
@@ -81,7 +78,7 @@ def plot_data(data, list_widget, start_time, end_time):
         print('Start time invalid')
         return
     elif end_time.text() == "":
-        print('End time invalid') # if user tries to plot without a time value
+        print('End time invalid')  # if user tries to plot without a time value
         return
     else:
         start = int(start_time.text())
@@ -102,16 +99,16 @@ def plot_data(data, list_widget, start_time, end_time):
                         widget.setParent(None)
                         if widget is not main_widget:
                             widget.deleteLater()
-                            gc.collect()  # dont think is doing anything, mem leak still exists
+                            gc.collect()  # don't think is doing anything, mem leak still exists
 
-        plot_gui = PlotGuiWidget(data, channels, start, end) # create plot widget
+        plot_gui = PlotGuiWidget(data, channels, start, end)  # create plot widget
 
         plot_splitter.addWidget(main_widget)
         plot_splitter.addWidget(plot_gui)
         plot_splitter.setStretchFactor(0, 500)
         plot_splitter.setStretchFactor(1, 100)
 
-        plot_splitter.setCollapsible(0, False) # stops widgets from being able to be hidden
+        plot_splitter.setCollapsible(0, False)  # stops widgets from being able to be hidden
         plot_splitter.setCollapsible(1, False)
 
         window_layout.addWidget(plot_splitter)
@@ -126,19 +123,20 @@ class PlotGuiWidget(QWidget):
 
         self.canvas = self.create_plot(csv, channels, start, end)
 
-        self.canvas.setMinimumWidth(600)  # i think this is an ok fix? will ask if it shouldn't be hard coded like this
+        self.canvas.setMinimumWidth(600)  # prevents canvas being hidden when created
 
-        toolbar = NavigationToolbar(self.canvas, self) # toolbar for zoom/pan
+        toolbar = NavigationToolbar(self.canvas, self)  # toolbar for zoom/pan
         plot_layout.addWidget(toolbar)
 
         plot_layout.addWidget(self.canvas)
 
     def create_plot(self, dataframe, channels, start, end):
-        annotations_file_path = main_widget.annot_win.annot_file.get_file_path() # path for loaded annots if any
+        annotations_file_path = main_widget.annot_win.annot_file.get_file_path()  # path for loaded annots if any
         global edfmd5
         global jsonpath
-        user_annot_file = jsonpath + edfmd5 + "_annotations.txt" # path for user created annots (defined multiple times, need to fix)
-        fig, axs = plot(annotations_file_path, user_annot_file, dataframe, channels, start, end, app)  # pass app to prevent crash
+        user_annot_file = jsonpath + edfmd5 + "_annotations.txt"  # path for user created annots (defined multiple times, need to fix)
+        fig, axs = plot(annotations_file_path, user_annot_file, dataframe, channels, start, end,
+                        app)  # pass app to prevent crash
         canvas = FigureCanvas(figure=fig)
         return canvas
 
@@ -157,11 +155,11 @@ class MainGuiWidget(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.annot_win = None # needs to be defined as none(?)
+        self.annot_win = None  # needs to be defined as none(?)
         self.setLayout(main_layout)
         load_title = "Select EDF file to load"
 
-        if dev_mode == 1: # 1 means load csv, not used anymore
+        if dev_mode == 1:  # 1 means load csv, not used anymore
             self.edf_file = FilePicker("Select EDF file to convert to CSV", convert, "Convert")
             main_layout.addWidget(self.edf_file)
             load_title = "Select CSV file to load"
@@ -180,20 +178,20 @@ class MainGuiWidget(QWidget):
                 data = raw.to_data_frame()
                 bipolar = False
                 for col in data.columns:
-                    if "-REF" in col or "-Ref" in col or "-ref" in col: # checks for "-ref" in column name, if exists need to make bipolar
+                    if "-REF" in col or "-Ref" in col or "-ref" in col:  # checks for "-ref" in column name, if exists need to make bipolar
                         bipolar = True
                         break
                     else:
                         bipolar = False
-                        # this way dont need user to select bipolar or not, and only works if data not bipolar yet
+                        # this way don't need user to select bipolar or not, and only works if data not bipolar yet
 
                 if bipolar:
                     data.columns = data.columns.str.replace('EEG ', '')
                     data.columns = data.columns.str.replace('-REF', '')
                     data.columns = data.columns.str.replace('-Ref', '')
-                    data.columns = data.columns.str.replace('-ref', '') # for cleaning
+                    data.columns = data.columns.str.replace('-ref', '')  # for cleaning
 
-                    new_data = pd.DataFrame() # create new df temporarily
+                    new_data = pd.DataFrame()  # create new df temporarily
 
                     # only being tested on this dataset : https://zenodo.org/records/4940267
                     new_data.insert(0, 'time', data['time'])
@@ -216,12 +214,12 @@ class MainGuiWidget(QWidget):
                     new_data.insert(17, 'Fz-Cz', data['Fz'] - data['Cz'])
                     new_data.insert(18, 'Cz-Pz', data['Cz'] - data['Pz'])
 
-                    data = new_data # put new df into old df
+                    data = new_data  # put new df into old df
                 time_freq = raw.info['sfreq']
         elif dev_mode == 1:  # load csv
             data = pd.read_csv(main_widget.dataset_file.get_file_path())
             time_freq = 0
-            for index, row in data.iterrows():  # use to double check
+            for index, row in data.iterrows():  # use to double-check
                 if row['time'] != 1:
                     time_freq += 1
                 elif row['time'] == 1:
@@ -270,11 +268,10 @@ class MainGuiWidget(QWidget):
                 elif row['time'] == 1:
                     break
 
-        file_length = len(data) / time_freq
+        file_length = len(data) / time_freq  # len data = num of seconds * time frequency
 
         # label to let user know how long file is
         data_time = QLabel(f"Length of data: {int(file_length)}s")
-
 
         # text entries for time
         int_validator = QIntValidator(0, int(file_length))  # used to force vals to be for int only
@@ -305,7 +302,7 @@ class MainGuiWidget(QWidget):
         plot_options_layout.addWidget(list_deselect_all, 1, 1)
         plot_options_layout.addWidget(annotation_load_button, 2, 0, 2, 2)
 
-        label_w = data_time.sizeHint().width() # set max width of below widgets to width of label
+        label_w = data_time.sizeHint().width()  # set max width of below widgets to width of label
         data_time.setMaximumWidth(label_w)
         start_time.setMaximumWidth(label_w)
         end_time.setMaximumWidth(label_w)
@@ -319,26 +316,29 @@ class MainGuiWidget(QWidget):
         time_layout.addWidget(plot_button)
         plot_options_layout.addLayout(time_layout, 0, 2)
 
-
         # onchange
 
-        start_time.textChanged.connect(lambda: self.time_calculation(start_time, end_time, amount_time, int(file_length), 1))
-        end_time.textChanged.connect(lambda: self.time_calculation(start_time, end_time, amount_time, int(file_length), 2))
-        amount_time.textChanged.connect(lambda: self.time_calculation(start_time, end_time, amount_time, int(file_length), 3))
+        start_time.textChanged.connect(
+            lambda: self.time_calculation(start_time, end_time, amount_time, int(file_length), 1))
+        end_time.textChanged.connect(
+            lambda: self.time_calculation(start_time, end_time, amount_time, int(file_length), 2))
+        amount_time.textChanged.connect(
+            lambda: self.time_calculation(start_time, end_time, amount_time, int(file_length), 3))
 
         main_layout.addLayout(plot_options_layout)
 
-    def annotation_window_toggle(self, checked): # lets annotation window be toggleable, this way data isnt deleted when closed
+    def annotation_window_toggle(self,
+                                 checked):  # lets annotation window be toggleable, this way data isn't deleted when closed
         if self.annot_win.isVisible():
             self.annot_win.hide()
         else:
             self.annot_win.show()
 
-    def select_all(self, col_list): # select everything in list widget
+    def select_all(self, col_list):  # select everything in list widget
         for i in range(col_list.count()):
             col_list.item(i).setSelected(True)
 
-    def deselect_all(self, col_list): # deselect everything in list widget
+    def deselect_all(self, col_list):  # deselect everything in list widget
         col_list.clearSelection()
 
     def time_calculation(self, start, end, amount, max_length, case):
@@ -358,9 +358,9 @@ class MainGuiWidget(QWidget):
             if int(start.text()) < 0:  # used to keep all 3 values in range 0 - file_length
                 start.setText(str(0))
 
-            #if start.text() != "" and end.text() != "" and int(end.text()) < int(start.text()):
+            # if start.text() != "" and end.text() != "" and int(end.text()) < int(start.text()):
             #    end.setText(str(int(start.text()) + 1))
-            # commented out as doesnt really work well in this way
+            # commented out as doesn't really work well in this way
 
             if int(start.text()) >= max_length:
                 start.setText(str(max_length - 1))
@@ -379,7 +379,7 @@ class MainGuiWidget(QWidget):
             pass
 
 
-class AnnotationLoadWidget(QWidget): # for displaying annotations from loaded file or user generated ones
+class AnnotationLoadWidget(QWidget):  # for displaying annotations from loaded file or user generated ones
     def __init__(self):
         super().__init__()
         global edfmd5
@@ -445,7 +445,7 @@ class AnnotationLoadWidget(QWidget): # for displaying annotations from loaded fi
         self.setLayout(annotations_layout)
 
 
-def load_annots(): # could be changed to avoid similar code to above, may not have time
+def load_annots():  # could be changed to avoid similar code to above, may not have time
     labels = ["Clean EEG", "Device Interference", "EMG", "Movement", "Electrode", "HF ventilation", "Biological Rhythm",
               "Seizure", "?", "??", "???"]
     loaded_annots = main_widget.annot_win.loaded_annots
@@ -464,7 +464,7 @@ def load_annots(): # could be changed to avoid similar code to above, may not ha
                     line_num += 1
 
 
-def change_directory(): # lets user change generated annot file dir + change table widget (not optimal)
+def change_directory():  # lets user change generated annot file dir + change table widget (not optimal)
     global jsonpath
     global edfmd5
     labels = ["Clean EEG", "Device Interference", "EMG", "Movement", "Electrode", "HF ventilation", "Biological Rhythm",
@@ -495,11 +495,11 @@ def change_directory(): # lets user change generated annot file dir + change tab
                     line_num += 1
 
 
-edfmd5 = None # def as none as global later
+edfmd5 = None  # def as none as global later
 jsonpath = None
 user_annot_file = None
 
-if not os.path.isfile("filepath.json"): # create json and/or dir if not exist
+if not os.path.isfile("filepath.json"):  # create json and/or dir if not exist
     print("CREATING JSON")
     if not os.path.isdir("annotations"):
         print("CREATING DIRECTORY")
@@ -507,7 +507,6 @@ if not os.path.isfile("filepath.json"): # create json and/or dir if not exist
     with open('filepath.json', 'w') as file:
         path = {'path': "annotations/"}
         json.dump(path, file)
-
 
 app = QApplication(sys.argv)
 window = QWidget()
