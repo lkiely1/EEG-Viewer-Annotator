@@ -5,7 +5,6 @@ import pandas as pd
 
 # used for csv annotations from this dataset: https://zenodo.org/records/4940267
 def annotations_convertor(filepath):
-    print("test")
     # open csv file
     df = pd.read_csv(filepath)
 
@@ -18,7 +17,6 @@ def annotations_convertor(filepath):
 
     for column in df.columns:
         with open(f"{os.path.dirname(filepath)}/annotations/eeg{column}_{filename_details[2]}.txt", 'w') as file:
-            #print(f"column: {column}")
             annotation_num = 7 # Seizure
             last_1 = None
             duration = 0

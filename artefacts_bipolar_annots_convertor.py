@@ -11,7 +11,6 @@ def annotations_convertor(filepath):
                 for line in file1:
                     if line != "":
                         annotation = line.strip('\n').split(',')
-                        # print(annotation[20])
                         # 2 to 19 are channels
                         # read through each
                         channels = [0] * 18
