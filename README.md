@@ -9,20 +9,25 @@ Developed as part of research project at MTU
 
 Load edf file: User selects EDF file to load using filepicker
 ![load-1.png](/readme_assets/load-1.png)
+![load-2.png](/readme_assets/load-2.png)
 
 Choose channels: User can select 1 or all channels from list box
-
+![channels.png](/readme_assets/channels.png)
 
 Set time: User can set the start + end time and duration (Start and end required, end calculated by setting start and duration)
+![time.png](/readme_assets/time.png)
 
 Load/preview annotations and change annotation directory: Seperate window can be opened to select annotation file to load, change directory of where user created annotations are stored/loaded from, preview annotations from both files
+![annot-load-1.png](/readme_assets/annot-load-1.png)
+![annot-load-2.png](/readme_assets/annot-load-2.png)
 
 Plot data: matplotlib plot of data 
+![plot.png](/readme_assets/plot.png)
 
-Move timeline to view data in dataset
+Move timeline to view data in dataset (click and drag mouse over bottom timeline subplot)
 
 Create annotation by clicking and dragging over area on plot
-
+![create-annot.png](/readme_assets/create-annot.png)
 
 # Usage
 
