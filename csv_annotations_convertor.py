@@ -1,9 +1,5 @@
 import math
 import os
-import sys
-
-import mne
-import numpy as np
 
 import pandas as pd
 
@@ -47,7 +43,4 @@ def annotations_convertor(filepath):
         #next col
 
 
-annotations_convertor('C:/Users/R00212290/Desktop/Research Project/datasets/eeg/annotations_2017_A.csv')
-annotations_convertor('C:/Users/R00212290/Desktop/Research Project/datasets/eeg/annotations_2017_B.csv')
-annotations_convertor('C:/Users/R00212290/Desktop/Research Project/datasets/eeg/annotations_2017_C.csv')
-
+annotations_convertor('path to csv file')
